@@ -1,0 +1,383 @@
+/* ---------------------------------------------------------------
+   Schedule board — rooms as tracks, bookings as clips.
+---------------------------------------------------------------- */
+.board {
+  --track-w: 116px;
+  --col-gap: 8px;
+  --lane-h: 64px;
+  --min-hour: 0px;
+  --board-bg: var(--plum-900);
+  --board-border: var(--plum-800);
+  --lane-bg: var(--plum-850);
+  --grid-line: rgb(255 255 255 / 0.07);
+  --track-bg: var(--plum-900);
+  --track-fg: #fff;
+  --track-meta: var(--plum-300);
+  --ruler-fg: var(--plum-300);
+  --clip-ink: rgb(30 23 41 / 0.88);
+  --past: rgb(30 23 41 / 0.55);
+  --hint: var(--marigold);
+
+  position: relative;
+  border: 1px solid var(--board-border);
+  border-radius: var(--radius-l);
+  background: var(--board-bg);
+  color: var(--track-fg);
+  overflow: hidden;
+}
+
+.board--light {
+  --board-bg: var(--surface);
+  --board-border: var(--line);
+  --lane-bg: var(--surface-2);
+  --grid-line: color-mix(in srgb, var(--ink) 8%, transparent);
+  --track-bg: var(--surface);
+  --track-fg: var(--ink);
+  --track-meta: var(--ink-3);
+  --ruler-fg: var(--ink-3);
+  --past: color-mix(in srgb, var(--page) 70%, transparent);
+  --hint: var(--ink-2);
+}
+
+.board-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--board-border) transparent;
+  padding: 10px 12px 14px 0;
+}
+
+.board-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--track-w) minmax(0, 1fr);
+  column-gap: var(--col-gap);
+  row-gap: 6px;
+  min-width: calc(var(--track-w) + var(--col-gap) + var(--hours) * var(--min-hour));
+}
+
+.board-row {
+  display: contents;
+}
+
+.board-corner,
+.board-track {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--track-bg);
+}
+
+.board-ruler {
+  position: relative;
+  height: 22px;
+}
+
+.ruler-tick {
+  position: absolute;
+  bottom: 0;
+  height: 100%;
+  border-left: 1px solid var(--grid-line);
+}
+
+.ruler-label {
+  position: absolute;
+  left: 5px;
+  top: 0;
+  font-size: 11px;
+  font-weight: 600;
+  font-stretch: 85%;
+  color: var(--ruler-fg);
+  white-space: nowrap;
+}
+
+.board-track {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 10px 0 16px;
+  border-radius: 0 8px 8px 0;
+  box-shadow: inset 4px 0 0 var(--room);
+}
+
+.track-name {
+  font-weight: 700;
+  font-size: var(--t-sm);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-meta {
+  font-size: 12px;
+  color: var(--track-meta);
+}
+
+.board-lane {
+  position: relative;
+  height: var(--lane-h);
+  border-radius: 8px;
+  background: var(--lane-bg);
+  overflow: hidden;
+}
+
+.lane-cells {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--hours), minmax(0, 1fr));
+}
+
+.lane-cell {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--grid-line);
+  background: transparent;
+  color: var(--hint);
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.lane-cell:first-child {
+  border-left-color: transparent;
+}
+
+.lane-cell--off {
+  cursor: default;
+}
+
+.lane-cell-hint {
+  position: absolute;
+  inset: auto 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  font-stretch: 80%;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.lane-cell:active:not(.lane-cell--off) {
+  background: color-mix(in srgb, var(--marigold) 22%, transparent);
+}
+
+.lane-cell:focus-visible {
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+.lane-cell:focus-visible .lane-cell-hint {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lane-cell:not(.lane-cell--off):hover {
+    background: color-mix(in srgb, var(--marigold) 14%, transparent);
+  }
+  .lane-cell:not(.lane-cell--off):hover .lane-cell-hint {
+    opacity: 1;
+  }
+}
+
+.lane-past {
+  position: absolute;
+  inset-block: 0;
+  z-index: 2;
+  background:
+    repeating-linear-gradient(135deg, var(--grid-line) 0 1px, transparent 1px 7px),
+    var(--past);
+  pointer-events: none;
+}
+
+/* Clips */
+.clip {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0 1px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--room);
+  color: var(--clip-ink);
+  text-align: left;
+  overflow: hidden;
+  font: inherit;
+  container-type: inline-size;
+}
+
+/* One-hour clips are narrow: keep the name, drop the time (it's on the ruler). */
+@container (max-width: 110px) {
+  .clip-sub {
+    display: none;
+  }
+}
+
+button.clip {
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), filter 140ms ease;
+}
+
+button.clip:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.clip:hover {
+    filter: brightness(1.06);
+  }
+}
+
+.clip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 7px 0;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.clip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.clip-sub {
+  flex-shrink: 0;
+  opacity: 0.75;
+  font-stretch: 85%;
+  white-space: nowrap;
+}
+
+.waveform {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: 2px 6px 5px;
+  fill: currentColor;
+  opacity: 0.34;
+}
+
+/* Tentative booking: waiting for the studio to approve */
+.clip--pending {
+  background:
+    repeating-linear-gradient(135deg, rgb(255 255 255 / 0.35) 0 5px, transparent 5px 10px),
+    var(--room);
+  box-shadow: inset 0 0 0 1.5px rgb(30 23 41 / 0.35);
+}
+
+.clip--completed,
+.clip--no_show {
+  opacity: 0.55;
+}
+
+.clip--block {
+  background: repeating-linear-gradient(135deg, var(--board-border) 0 6px, transparent 6px 12px), var(--lane-bg);
+  color: var(--track-meta);
+  box-shadow: inset 0 0 0 1px var(--board-border);
+}
+
+.clip--selection {
+  background: var(--plum-950);
+  color: var(--marigold);
+  box-shadow: 0 0 0 2px var(--marigold);
+  z-index: 4;
+}
+
+.clip--selection .waveform {
+  opacity: 0.6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .board--light .clip--selection {
+    background: var(--plum-100);
+    color: var(--plum-950);
+  }
+}
+
+.clip--free-bonus {
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--marigold) 55%, transparent) 0 5px, transparent 5px 10px);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--marigold) 80%, transparent);
+  color: var(--track-fg);
+  z-index: 4;
+}
+
+/* Now line */
+.board-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--track-w) + var(--col-gap) + (100% - var(--track-w) - var(--col-gap)) * var(--p));
+  z-index: 3;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--rec);
+  pointer-events: none;
+  box-shadow: 0 0 10px rgb(255 90 95 / 0.55);
+}
+
+.board-playhead::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 12px;
+  height: 9px;
+  background: var(--rec);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+/* The one orchestrated moment: clips "record in" left to right on first load. */
+.board[data-intro] .clip {
+  animation: clip-record 560ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 55ms + 150ms);
+}
+
+@keyframes clip-record {
+  from {
+    clip-path: inset(0 100% 0 0 round 6px);
+  }
+  to {
+    clip-path: inset(0 0 0 0 round 6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board[data-intro] .clip {
+    animation: clip-fade 200ms ease both;
+  }
+}
+
+@keyframes clip-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .board {
+    --track-w: 84px;
+    --min-hour: 46px;
+    --lane-h: 58px;
+  }
+  .board-track {
+    padding: 0 6px 0 12px;
+  }
+  .track-name {
+    font-size: 13px;
+  }
+}
