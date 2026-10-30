@@ -13,9 +13,11 @@ function readStored(key, fallback) {
   }
 }
 
+const LISTED = ['booking', 'block', 'selection', 'free-bonus'];
+
 /** Open stretches of the day for one room: hours not taken by a booking or block and not already past. */
 function openStretches(roomItems, openHour, closeHour, earliest) {
-  const taken = roomItems.filter((it) => it.kind === 'booking' || it.kind === 'block');
+  const taken = roomItems.filter((it) => LISTED.includes(it.kind));
   const stretches = [];
   let from = null;
   for (let h = Math.max(openHour, earliest); h < closeHour; h++) {
@@ -37,7 +39,7 @@ function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, onSe
         const roomItems = items[room.id] || [];
         const rows = [
           ...roomItems
-            .filter((it) => it.kind === 'booking' || it.kind === 'block')
+            .filter((it) => LISTED.includes(it.kind))
             .map((it) => ({ type: it.kind, start: it.start, end: it.end, it })),
           ...openStretches(roomItems, openHour, closeHour, earliest).map(([start, end]) => ({ type: 'open', start, end })),
         ].sort((a, b) => a.start - b.start);
@@ -67,6 +69,9 @@ function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, onSe
                           </button>
                         )}
                       </>
+                    )}
+                    {(row.type === 'selection' || row.type === 'free-bonus') && (
+                      <span className="simple-what">{row.it.label}</span>
                     )}
                     {row.type === 'block' && (
                       <span className="simple-what simple-what--muted">{isPublic ? 'Closed' : `Blocked: ${row.it.label}`}</span>
@@ -176,6 +181,8 @@ export function DayView({
   onSelectClip,
   onSelectFree,
   freeLabel,
+  theme = isPublic ? 'dark' : 'light',
+  boardProps,
 }) {
   const storeKey = isPublic ? 'dmg-site-day-view' : 'dmg-admin-day-view';
   const [view, setView] = useState(() => readStored(storeKey, 'list'));
@@ -190,7 +197,7 @@ export function DayView({
   const listEarliest = earliest ?? (nowHour === null ? openHour : Math.ceil(nowHour));
 
   return (
-    <div className={clsx('day-view', isPublic && 'day-view--dark')}>
+    <div className={clsx('day-view', theme === 'dark' && 'day-view--dark')}>
       <div className="day-view-bar">
         <div className="seg" role="group" aria-label="Schedule view">
           <button type="button" className="seg-btn" aria-pressed={view === 'list'} onClick={() => choose('list')}>
@@ -226,7 +233,8 @@ export function DayView({
         />
       ) : (
         <ScheduleBoard
-          theme={isPublic ? 'dark' : 'light'}
+          theme={theme}
+          {...boardProps}
           rooms={rooms}
           openHour={openHour}
           closeHour={closeHour}

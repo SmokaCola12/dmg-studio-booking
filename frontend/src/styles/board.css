@@ -537,6 +537,8 @@ button.clip:active {
 @media (max-width: 640px) {
   .simple-row {
     grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+    padding: 12px 14px;
   }
 
   .simple-time,
@@ -544,6 +546,24 @@ button.clip:active {
   .simple-what--muted,
   .simple-row--open .simple-what--muted {
     grid-column: 1 / -1;
+  }
+
+  /* Open slots: time and label on the left, Book button on the right. */
+  .simple-row--open .simple-time,
+  .simple-row--open .simple-what--muted {
+    grid-column: 1;
+  }
+
+  .simple-row--open .simple-act {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    height: 40px;
+    padding: 0 22px;
+  }
+
+  .simple-room-name {
+    padding: 12px 14px;
   }
 }
 
@@ -1227,6 +1247,19 @@ button.clip:active {
 }
 .resched-nudge svg { width: 16px; height: 16px; animation: nudge-swing 2.6s ease-in-out infinite; }
 .resched-nudge:hover { background: var(--marigold); color: var(--plum-950); }
+@media (max-width: 640px) {
+  .resched-nudge {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--marigold) 45%, transparent);
+    border-radius: var(--radius-m);
+    background: color-mix(in srgb, var(--marigold) 10%, transparent);
+    font-size: var(--t-sm);
+    text-align: center;
+  }
+}
 @keyframes nudge-swing {
   0%, 60%, 100% { transform: rotate(0); }
   70% { transform: rotate(-35deg); }

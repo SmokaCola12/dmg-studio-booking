@@ -671,10 +671,22 @@ button,
     max-height: calc(100dvh - 24px);
     translate: none;
     border-radius: var(--radius-l) var(--radius-l) 0 0;
-    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    padding: 28px 18px calc(20px + env(safe-area-inset-bottom, 0px));
     transition:
       transform 320ms var(--ease-drawer),
       opacity 320ms var(--ease-drawer);
+  }
+  /* Grab handle */
+  .dialog-popup::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    translate: -50% 0;
+    border-radius: 2px;
+    background: var(--line-strong);
   }
   .dialog-popup[data-starting-style],
   .dialog-popup[data-ending-style] {
