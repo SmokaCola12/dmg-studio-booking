@@ -4,33 +4,22 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Band rehearsal studio website with online booking and admin dashboard",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "dev": "concurrently -k -n api,web -c magenta,yellow \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:api": "node --watch-path=server server/index.js --dev",
-    "dev:web": "vite",
-    "build": "vite build",
-    "start": "node server/index.js",
-    "seed:demo": "node server/seed-demo.js"
+    "dev:api": "npm run dev -w backend",
+    "dev:web": "npm run dev -w frontend",
+    "build": "npm run build -w frontend",
+    "start": "npm run start -w backend",
+    "seed:demo": "npm run seed:demo -w backend"
   },
   "engines": {
     "node": ">=20.12"
   },
-  "dependencies": {
-    "@base-ui/react": "^1.9.0",
-    "@fontsource-variable/archivo": "^5.3.0",
-    "@number-flow/react": "^0.6.2",
-    "better-sqlite3": "^13.0.3",
-    "clsx": "^2.1.1",
-    "express": "^5.3.0",
-    "lucide-react": "^1.61.0",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.4",
-    "sonner": "^2.0.8"
-  },
   "devDependencies": {
-    "@vitejs/plugin-react": "^6.1.2",
-    "concurrently": "^10.0.6",
-    "vite": "^8.3.5"
+    "concurrently": "^10.0.6"
   }
 }

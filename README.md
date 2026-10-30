@@ -46,10 +46,10 @@ Sa likod ng Nginx o Caddy, i-proxy lang lahat papunta sa `PORT`.
 
 | Ano | Saan |
 | --- | --- |
-| Pangalan, tagline, intro, address, map, phone, Messenger, socials, house rules, FAQ, gallery | `src/config/site.js` |
+| Pangalan, tagline, intro, address, map, phone, Messenger, socials, house rules, FAQ, gallery | `frontend/src/config/site.js` |
 | Rooms, rates, gear, oras, promo, GCash | Admin → Rooms / Settings |
-| Photos | ilagay sa `public/gallery/` tapos ilista sa `gallery` sa `src/config/site.js` |
-| Kulay at fonts | tokens sa itaas ng `src/styles/base.css` |
+| Photos | ilagay sa `frontend/public/gallery/` tapos ilista sa `gallery` sa `frontend/src/config/site.js` |
+| Kulay at fonts | tokens sa itaas ng `frontend/src/styles/base.css` |
 
 Placeholder pa ang address, phone at photos.
 
@@ -63,18 +63,26 @@ Placeholder pa ang address, phone at photos.
 ## Structure
 
 ```
-server/
-  index.js            Express app (API + built site sa production)
+frontend/             Vite + React (site at :5173 in dev)
+  src/
+    config/site.js    studio content
+    pages/            Home, Book, BookingDone, CheckBooking, admin/*
+    components/       ScheduleBoard, Waveform, dialogs, form parts
+    styles/           base, board, site, booking, admin
+  public/             favicon, gallery photos
+backend/              Express API (:4000), serves frontend/dist in production
+  index.js            Express app (API + built site)
   db.js               schema, default settings, seed rooms
   routes/public.js    site data, availability, create/lookup/cancel booking
   routes/admin.js     login, overview, bookings, schedule, blocks, rooms, settings
   lib/                time zone, scheduling rules, auth tokens, validation
-src/
-  config/site.js      studio content
-  pages/              Home, Book, BookingDone, CheckBooking, admin/*
-  components/         ScheduleBoard, Waveform, dialogs, form parts
-  styles/             base, board, site, booking, admin
+data/                 SQLite database (studio.db), stays at the project root
+docs/API.md           reference for every endpoint
+tools/agents-api/     local API that runs the Claude Code agents
+.env                  stays at the project root
 ```
+
+Pareho pa rin ang mga command sa project root: `npm run dev`, `npm run build`, `npm start`, `npm run seed:demo`. Pagkatapos mag-`git pull` ng ganitong paglipat, i-run ulit ang `npm install`.
 
 ## Susunod na pwedeng idagdag
 
