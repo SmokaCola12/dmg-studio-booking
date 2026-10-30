@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import { adminApi } from '../../lib/api.js';
 import { dateLabel, peso, rangeLabel } from '../../lib/format.js';
-import { ScheduleBoard } from '../../components/ScheduleBoard.jsx';
+import { DayView } from '../../components/DayView.jsx';
 import { LoadError, PageHead, useAdmin, useLoader } from './admin-shared.jsx';
 import { BookingRow } from './BookingRow.jsx';
 import { BookingDialog } from './BookingDialog.jsx';
@@ -155,8 +155,7 @@ export default function Overview() {
           </Link>
         </div>
         {day.data && s ? (
-          <ScheduleBoard
-            theme="light"
+          <DayView
             rooms={boardRooms(day.data)}
             openHour={s.open_hour}
             closeHour={s.close_hour}

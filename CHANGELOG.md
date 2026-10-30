@@ -7,6 +7,7 @@ Categories: **Added**, **Changed**, **Fixed**, **Removed**, **Security**.
 ## [Unreleased]
 
 ### Added
+- Customers can reschedule from My booking: `POST /api/bookings/reschedule` moves the date and start time (same room and hours, same cutoff as cancelling), with an animated walkthrough and a "Need to resched?" link on the home page.
 - `docs/API.md`: reference for every public and admin endpoint.
 - `CHANGELOG.md`: this file.
 - `tools/agents-api/`: local HTTP API to list and run the project agents through the Claude Agent SDK (list, run, stream events, cancel, history).

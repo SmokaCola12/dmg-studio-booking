@@ -59,6 +59,10 @@ Body: `{ code, phone }`. Response: `{ booking }`. `404` if the code and mobile n
 Body: `{ code, phone }`. Response: `{ booking }` with status `cancelled`.
 Errors: `404` no match; `409` if inside the cancellation cutoff (`cancel_cutoff_hours`).
 
+### `POST /api/bookings/reschedule`
+Body: `{ code, phone, date, startHour }`. Keeps the room and paid hours; the free promo hour is recalculated for the new slot. Response: `{ booking, freeNote }`.
+Errors: `400` bad date or same time as now; `404` no match; `409` inside the cancellation cutoff, or the new time is taken, closed or past closing.
+
 ---
 
 ## Admin endpoints (`/api/admin`)

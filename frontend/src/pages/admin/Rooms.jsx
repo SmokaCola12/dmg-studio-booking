@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Users } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import clsx from 'clsx';
 import { adminApi } from '../../lib/api.js';
 import { peso } from '../../lib/format.js';
@@ -41,17 +41,25 @@ export default function Rooms() {
             <li key={r.id} className={clsx('room-admin', !r.active && 'is-hidden')} style={{ '--room': r.color }}>
               <div className="room-admin-main">
                 <p className="room-admin-name">
+                  <span aria-hidden="true" className="room-swatch" />
                   {r.name}
                   {!r.active && <span className="badge badge-completed">Hidden from website</span>}
                 </p>
-                <p className="room-admin-meta tnum">
-                  {peso(r.hourly_rate)} an hour
-                  <span aria-hidden="true" className="sep" />
-                  <Users aria-hidden="true" /> {r.capacity}
-                  <span aria-hidden="true" className="sep" />
-                  {r.gear.length} {r.gear.length === 1 ? 'item' : 'items'} of gear
-                </p>
               </div>
+              <dl className="room-admin-specs tnum">
+                <div>
+                  <dt>Rate</dt>
+                  <dd>{peso(r.hourly_rate)}/hr</dd>
+                </div>
+                <div>
+                  <dt>Fits</dt>
+                  <dd>{r.capacity}</dd>
+                </div>
+                <div>
+                  <dt>Gear</dt>
+                  <dd>{r.gear.length}</dd>
+                </div>
+              </dl>
               <button
                 type="button"
                 className="btn btn-outline btn-sm"

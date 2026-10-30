@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Ban, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { adminApi } from '../../lib/api.js';
 import { addDays, dateLabel, rangeLabel, relativeDay } from '../../lib/format.js';
-import { ScheduleBoard } from '../../components/ScheduleBoard.jsx';
+import { DayView } from '../../components/DayView.jsx';
 import { LoadError, PageHead, useAdmin, useLoader } from './admin-shared.jsx';
 import { BookingRow } from './BookingRow.jsx';
 import { BookingDialog } from './BookingDialog.jsx';
@@ -90,8 +90,7 @@ export default function Schedule() {
       </div>
 
       {d && s ? (
-        <ScheduleBoard
-          theme="light"
+        <DayView
           rooms={boardRooms(d)}
           openHour={s.open_hour}
           closeHour={s.close_hour}
@@ -107,7 +106,6 @@ export default function Schedule() {
       ) : (
         <div className="skeleton" style={{ height: 180 }} />
       )}
-      <p className="a-hint">Tap an empty hour to add a booking. Striped bookings are still waiting for approval.</p>
 
       {d && d.blocks.length > 0 && (
         <section className="a-section" aria-labelledby="blocks-title">
