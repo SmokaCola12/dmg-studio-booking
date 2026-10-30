@@ -22,7 +22,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found.' }));
 
 // In production, serve the built React app and let the client router handle paths.
-const dist = path.join(__dirname, '..', 'dist');
+const dist = path.join(__dirname, '..', 'frontend', 'dist');
 if (!isDev && fs.existsSync(dist)) {
   app.use(express.static(dist, { index: false, maxAge: '1h' }));
   app.get('/{*splat}', (req, res) => res.sendFile(path.join(dist, 'index.html')));
