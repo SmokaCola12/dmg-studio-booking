@@ -231,9 +231,11 @@ function BookingFlow({ siteData }) {
                         onClick={() => setRoomId(r.id)}
                       >
                         <span className="room-option-name">{r.name}</span>
-                        <span className="room-option-meta tnum">
-                          {peso(r.hourlyRate)} an hour, fits {r.capacity}
+                        <span className="room-option-price tnum">
+                          {peso(r.hourlyRate)}
+                          <small>/hr</small>
                         </span>
+                        <span className="room-option-meta">Up to {r.capacity} people</span>
                       </button>
                     ))}
                   </div>
