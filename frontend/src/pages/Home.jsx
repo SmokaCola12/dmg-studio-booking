@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Banknote, CalendarDays, Camera, Clock, MapPin, MessageCircle, Navigation, Phone, Users } from 'lucide-react';
+import { CalendarDays, MessageCircle, Navigation, Phone } from 'lucide-react';
 import { site } from '../config/site.js';
 import { useSite } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
@@ -74,27 +74,30 @@ export default function Home() {
       <section className="hero" aria-labelledby="hero-title">
         <div className="wrap">
           <div className="hero-intro">
+            <p className="hero-kicker label">
+              <i className="rec-dot" aria-hidden="true" /> Live room board
+            </p>
             <h1 id="hero-title" className="hero-title">
               {site.name}
             </h1>
             <p className="hero-lead">{site.intro}</p>
             {settings && (
-              <ul className="hero-facts">
-                <li>
-                  <Clock aria-hidden="true" />
-                  {hoursSentence(settings)}
-                </li>
+              <dl className="hero-facts">
+                <div>
+                  <dt className="label">Hours</dt>
+                  <dd>{hoursSentence(settings)}</dd>
+                </div>
                 {cheapest !== null && (
-                  <li>
-                    <Banknote aria-hidden="true" />
-                    Rooms from {peso(cheapest)} an hour
-                  </li>
+                  <div>
+                    <dt className="label">Rate</dt>
+                    <dd>From <span className="tnum">{peso(cheapest)}</span> an hour</dd>
+                  </div>
                 )}
-                <li>
-                  <MapPin aria-hidden="true" />
-                  {site.address[site.address.length - 1]}
-                </li>
-              </ul>
+                <div>
+                  <dt className="label">Where</dt>
+                  <dd>{site.address[site.address.length - 1]}</dd>
+                </div>
+              </dl>
             )}
           </div>
 
@@ -219,8 +222,9 @@ export default function Home() {
       <section className="section" id="rooms" aria-labelledby="rooms-title">
         <div className="wrap">
           <div className="section-head">
-            <h2 id="rooms-title" className="section-title">Rooms and rates</h2>
-            <p className="section-lead">Every room comes with the backline set up and sound-checked. Prices are per hour, for the whole band.</p>
+            <p className="label section-kicker">Rooms / rates</p>
+            <h2 id="rooms-title" className="section-title">Pick your room</h2>
+            <p className="section-lead">Backline is set up and checked before you walk in. The rate is per hour for the whole band, not per head.</p>
           </div>
 
           <div className="room-list">
@@ -229,9 +233,7 @@ export default function Home() {
                 <div className="room-main">
                   <h3 className="room-name">{room.name}</h3>
                   <p className="room-desc">{room.description}</p>
-                  <p className="room-cap">
-                    <Users aria-hidden="true" /> Fits up to {room.capacity} people
-                  </p>
+                  <p className="room-cap label">Fits up to {room.capacity} people</p>
                 </div>
                 {room.gear.length > 0 && (
                   <ul className="room-gear" aria-label={`Gear in ${room.name}`}>
@@ -261,6 +263,7 @@ export default function Home() {
       <section className="section section-alt" aria-labelledby="gallery-title">
         <div className="wrap">
           <div className="section-head">
+            <p className="label section-kicker">The rooms, as they are</p>
             <h2 id="gallery-title" className="section-title">Inside the studio</h2>
           </div>
           <div className="gallery">
@@ -272,7 +275,7 @@ export default function Home() {
                 ))
               : site.galleryPlaceholders.map((label) => (
                   <figure key={label} className="gallery-item gallery-placeholder">
-                    <Camera aria-hidden="true" />
+                    <span className="label">Photo to come</span>
                     <figcaption>{label}</figcaption>
                   </figure>
                 ))}
@@ -283,6 +286,7 @@ export default function Home() {
       <section className="section" aria-labelledby="rules-title">
         <div className="wrap two-col">
           <div>
+            <p className="label section-kicker">House rules</p>
             <h2 id="rules-title" className="section-title">Before you come</h2>
             <ul className="rules">
               {site.houseRules.map((r) => (
@@ -296,6 +300,7 @@ export default function Home() {
             </ul>
           </div>
           <div>
+            <p className="label section-kicker">FAQ</p>
             <h2 className="section-title">Questions</h2>
             <div className="faq">
               {site.faqs.map((f) => (
@@ -312,6 +317,7 @@ export default function Home() {
       <section className="section section-alt" id="visit" aria-labelledby="visit-title">
         <div className="wrap visit">
           <div className="visit-info">
+            <p className="label section-kicker">Find the door</p>
             <h2 id="visit-title" className="section-title">Visit</h2>
             <address className="visit-address">
               {site.address.map((l) => (

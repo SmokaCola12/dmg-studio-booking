@@ -5,9 +5,9 @@
 export const site = {
   name: 'DMG Studio',
   shortName: 'DMG Studio',
-  tagline: 'Rehearsal rooms for bands, open every day.',
+  tagline: 'Rehearsal rooms for bands. Amps warm, kit tuned, you just plug in.',
   intro:
-    'Full-band rooms with the drums, amps and PA already set up. Bring your instruments, plug in, and play. Book an hour or the whole night, right from your phone.',
+    'Backlined rooms with a drum kit, amps and PA already up. Bring guitars, sticks and cables, and play. Pick an open hour on the board below and book it from your phone.',
 
   // Where people find you
   address: ['Unit 2, 123 Sample Street', 'Barangay Sample, Quezon City'],

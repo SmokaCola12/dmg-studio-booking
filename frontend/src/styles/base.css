@@ -29,7 +29,7 @@
   --ink-3: #736b80;
   --line: #e2dee9;
   --line-strong: #cbc5d5;
-  --focus: #6c4fd6;
+  --focus: #9a5f00;
 
   --ok: #1f7a4d;
   --ok-bg: #e3f4ea;
@@ -40,6 +40,8 @@
   --muted-bg: #ecebef;
 
   --font: 'Archivo Variable', 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Console-label face: system mono, no extra download. For times, prices, codes, labels. */
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Consolas, 'Liberation Mono', monospace;
 
   /* Type scale (perfect fourth, 17px base) */
   --t-xs: 0.8125rem;   /* 13 */
@@ -50,16 +52,17 @@
   --t-xl: 2.3125rem;   /* 37 */
   --t-2xl: clamp(2.5rem, 6vw, 3.875rem);
 
-  --radius-s: 6px;
-  --radius-m: 10px;
-  --radius-l: 16px;
+  /* Hardware corners: tight, not pillowy */
+  --radius-s: 2px;
+  --radius-m: 4px;
+  --radius-l: 6px;
 
   /* Motion (from Emil Kowalski's design engineering notes) */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --shadow-pop: 0 1px 2px rgb(30 23 41 / 0.06), 0 12px 32px -8px rgb(30 23 41 / 0.22);
+  --shadow-pop: 0 0 0 1px var(--line-strong), 0 3px 0 rgb(30 23 41 / 0.28);
   --gutter: clamp(16px, 4vw, 40px);
   --max: 1180px;
 }
@@ -74,7 +77,7 @@
     --ink-3: #a59cb5;
     --line: #362c45;
     --line-strong: #4a3e5c;
-    --focus: #b8a4ff;
+    --focus: var(--marigold);
 
     --ok: #6fd3a0;
     --ok-bg: #173527;
@@ -83,7 +86,7 @@
     --bad: #ff8a80;
     --bad-bg: #3d1c1c;
     --muted-bg: #2c2538;
-    --shadow-pop: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -8px rgb(0 0 0 / 0.6);
+    --shadow-pop: 0 0 0 1px var(--line-strong), 0 3px 0 rgb(0 0 0 / 0.5);
   }
 }
 
@@ -174,7 +177,26 @@ button,
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-s);
+}
+
+/* Always-dark surfaces need the marigold ring in light mode too */
+.site-header :focus-visible,
+.site-footer :focus-visible,
+.hero :focus-visible,
+.promo :focus-visible,
+.board:not(.board--light) :focus-visible {
+  outline-color: var(--marigold);
+}
+
+/* Console label: tiny mono caps, used for kickers, units, column heads */
+.label {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 .sr-only {
@@ -246,6 +268,8 @@ button,
 .btn-primary {
   --btn-bg: var(--marigold);
   --btn-fg: var(--marigold-ink);
+  font-weight: 750;
+  box-shadow: inset 0 -2px 0 rgb(47 33 0 / 0.3); /* a key with a visible bottom edge */
 }
 
 .btn-dark {
@@ -271,14 +295,14 @@ button,
   min-height: 52px;
   padding: 0 1.4em;
   font-size: var(--t-base);
-  border-radius: 12px;
+  border-radius: var(--radius-m);
 }
 
 .btn-sm {
   min-height: 36px;
   padding: 0 0.8em;
   font-size: var(--t-xs);
-  border-radius: 8px;
+  border-radius: var(--radius-m);
 }
 
 .btn-block {
@@ -321,8 +345,11 @@ button,
 }
 
 .field-label {
-  font-size: var(--t-sm);
-  font-weight: 650;
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--ink);
 }
 
@@ -374,7 +401,7 @@ button,
 .textarea:focus-visible {
   outline: none;
   border-color: var(--focus);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent);
+  box-shadow: 0 0 0 1px var(--focus);
 }
 
 .input[aria-invalid='true'],
@@ -462,11 +489,14 @@ button,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 9px 2px 8px;
-  border-radius: 99px;
-  font-size: var(--t-xs);
-  font-weight: 650;
-  line-height: 1.6;
+  padding: 1px 8px 1px 7px;
+  border-radius: var(--radius-s);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.7;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -475,7 +505,6 @@ button,
   content: '';
   width: 6px;
   height: 6px;
-  border-radius: 50%;
   background: currentColor;
 }
 
@@ -604,7 +633,7 @@ button,
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-m);
   background: transparent;
   color: var(--ink-3);
   cursor: pointer;
@@ -641,7 +670,7 @@ button,
     width: 100%;
     max-height: calc(100dvh - 24px);
     translate: none;
-    border-radius: 18px 18px 0 0;
+    border-radius: var(--radius-l) var(--radius-l) 0 0;
     padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
     transition:
       transform 320ms var(--ease-drawer),

@@ -97,7 +97,7 @@
   justify-content: center;
   min-width: 0;
   padding: 0 10px 0 16px;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 var(--radius-m) var(--radius-m) 0;
   box-shadow: inset 4px 0 0 var(--room);
 }
 
@@ -118,7 +118,7 @@
 .board-lane {
   position: relative;
   height: var(--lane-h);
-  border-radius: 8px;
+  border-radius: var(--radius-m);
   background: var(--lane-bg);
   overflow: hidden;
 }
@@ -327,7 +327,6 @@ button.clip:active {
   margin-left: -1px;
   background: var(--rec);
   pointer-events: none;
-  box-shadow: 0 0 10px rgb(255 90 95 / 0.55);
 }
 
 .board-playhead::before {

@@ -123,15 +123,73 @@ button.step-btn {
   min-width: 0;
   padding: 14px 16px 14px 22px;
   border: 1.5px solid var(--line-strong);
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   text-align: left;
   cursor: pointer;
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 140ms var(--ease-out);
 }
 
+/* Room choice: one joined strip, name and price on a line, selection marked by a bar in the room colour */
+.room-options {
+  gap: 0;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+  background: var(--surface);
+}
+
 .room-option {
-  box-shadow: inset 6px 0 0 var(--room);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  column-gap: 12px;
+  row-gap: 4px;
+  padding: 14px 16px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  position: relative;
+}
+
+.room-option + .room-option {
+  border-left: 1.5px solid var(--line-strong);
+}
+
+.room-option::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--room);
+  opacity: 0.35;
+}
+
+.room-option-name {
+  font-size: var(--t-md);
+}
+
+.room-option-price {
+  font-weight: 720;
+  font-size: var(--t-md);
+}
+
+.room-option-price small {
+  margin-left: 2px;
+  font-family: var(--mono);
+  font-size: 0.7em;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.room-option-meta {
+  grid-column: 1 / -1;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .room-option:active,
@@ -142,10 +200,15 @@ button.step-btn {
 }
 
 .room-option[aria-checked='true'] {
-  border-color: var(--ink);
-  box-shadow:
-    inset 6px 0 0 var(--room),
-    0 0 0 1px var(--ink);
+  background: color-mix(in srgb, var(--room) 14%, var(--surface));
+}
+
+.room-option[aria-checked='true']::after {
+  opacity: 1;
+}
+
+.room-option:focus-visible {
+  outline-offset: -3px;
 }
 
 .room-option-name,
@@ -199,7 +262,7 @@ button.step-btn {
   height: 80px;
   padding: 0;
   border: 1.5px solid var(--line-strong);
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   scroll-snap-align: start;
   cursor: pointer;
@@ -307,7 +370,7 @@ button.step-btn {
   min-height: 58px;
   padding: 9px 12px;
   border: 1.5px solid var(--line-strong);
-  border-radius: 10px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   text-align: left;
   cursor: pointer;
@@ -374,7 +437,7 @@ button.step-btn {
 .empty-note {
   padding: 18px;
   border: 1.5px dashed var(--line-strong);
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   color: var(--ink-2);
 }
 
@@ -502,7 +565,7 @@ button.step-btn {
       max(var(--gutter), env(safe-area-inset-left, 0px));
     border-top: 1px solid var(--line);
     background: var(--surface);
-    box-shadow: 0 -8px 24px -12px rgb(30 23 41 / 0.25);
+    border-top: 2px solid var(--ink);
   }
   .book-bar-info {
     display: flex;
@@ -578,7 +641,7 @@ button.step-btn {
   gap: 16px;
   margin-top: 12px;
   padding: 16px;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--surface-2);
 }
 
