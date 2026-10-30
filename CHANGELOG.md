@@ -13,6 +13,7 @@ Categories: **Added**, **Changed**, **Fixed**, **Removed**, **Security**.
 - `tools/agents-api/`: local HTTP API to list and run the project agents through the Claude Agent SDK (list, run, stream events, cancel, history).
 
 ### Changed
+- README rewritten in English (was Taglish) and now mentions rescheduling in My booking.
 - Book page: the time preview has the same List / Timeline switcher as the home page; on phones the day switcher fits without scrolling.
 - Phone layout: open slots in the list view show the Book button beside the time, the reschedule link is a full-width card, and dialogs get a bottom-sheet grab handle.
 - Split the project into `frontend/` (Vite + React) and `backend/` (Express + SQLite) folders, managed as npm workspaces. Commands are unchanged (`npm run dev`, `build`, `start`, `seed:demo`); run `npm install` after pulling. `.env` and `data/` stay at the project root.
