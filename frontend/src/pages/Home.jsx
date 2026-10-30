@@ -93,7 +93,7 @@ export default function Home() {
             </h1>
             <p className="hero-lead">{site.intro}</p>
             <Link className="resched-nudge" to="/check">
-              <CalendarClock aria-hidden="true" /> Need to resched? Move your booking
+              <CalendarClock aria-hidden="true" /> Need to reschedule? Move your booking
             </Link>
             {settings && (
               <dl className="hero-facts">

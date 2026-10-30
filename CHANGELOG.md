@@ -7,12 +7,14 @@ Categories: **Added**, **Changed**, **Fixed**, **Removed**, **Security**.
 ## [Unreleased]
 
 ### Added
-- Customers can reschedule from My booking: `POST /api/bookings/reschedule` moves the date and start time (same room and hours, same cutoff as cancelling), with an animated walkthrough and a "Need to resched?" link on the home page.
+- Customers can reschedule from My booking: `POST /api/bookings/reschedule` moves the date and start time (same room and hours, same cutoff as cancelling), with an animated walkthrough and a "Need to reschedule?" link on the home page.
 - `docs/API.md`: reference for every public and admin endpoint.
 - `CHANGELOG.md`: this file.
 - `tools/agents-api/`: local HTTP API to list and run the project agents through the Claude Agent SDK (list, run, stream events, cancel, history).
 
 ### Changed
+- Book page: the time preview has the same List / Timeline switcher as the home page; on phones the day switcher fits without scrolling.
+- Phone layout: open slots in the list view show the Book button beside the time, the reschedule link is a full-width card, and dialogs get a bottom-sheet grab handle.
 - Split the project into `frontend/` (Vite + React) and `backend/` (Express + SQLite) folders, managed as npm workspaces. Commands are unchanged (`npm run dev`, `build`, `start`, `seed:demo`); run `npm install` after pulling. `.env` and `data/` stay at the project root.
 
 ## [1.0.0]

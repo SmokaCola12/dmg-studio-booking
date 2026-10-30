@@ -9,10 +9,9 @@ import { useAvailability } from '../lib/useAvailability.js';
 import { api } from '../lib/api.js';
 import { startOptions, promoFreeHours } from '../lib/schedule.js';
 import { addDays, dateLabel, hourLabel, hoursText, peso, rangeLabel, weekdayOf } from '../lib/format.js';
-import { ScheduleBoard } from '../components/ScheduleBoard.jsx';
+import { DayView } from '../components/DayView.jsx';
 import { Field, Stepper } from '../components/ui.jsx';
 import { HowToBook, claimTour } from '../components/HowToBook.jsx';
-import { Legend } from '../components/DayView.jsx';
 
 const STEPS = ['Time', 'Your details', 'Review'];
 const DRAFT_KEY = 'booking_details_draft';
@@ -304,18 +303,15 @@ function BookingFlow({ siteData }) {
                   />
                   {avail && room && avail.window.open && (
                     <div className="lane-preview">
-                      <div className="lane-preview-bar">
-                        <Legend isPublic />
-                      </div>
-                      <ScheduleBoard
+                      <DayView
+                        isPublic
                         theme="light"
                         rooms={[room]}
-                        showRates={false}
+                        boardProps={{ showRates: false, focusHour: selected ? selected.hour : avail.window.earliest }}
                         openHour={settings.open_hour}
                         closeHour={settings.close_hour}
                         nowHour={avail.date === avail.now.date ? avail.now.hour + avail.now.minute / 60 : null}
                         earliest={avail.window.earliest}
-                        focusHour={selected ? selected.hour : avail.window.earliest}
                         items={{
                           [room.id]: [
                             ...busy.map((b) => ({ ...b, label: b.kind === 'block' ? 'Closed' : 'Booked' })),
