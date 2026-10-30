@@ -69,6 +69,8 @@ export const api = {
   createBooking: (payload) => request('POST', '/bookings', payload),
   lookupBooking: (code, phone) => request('POST', '/bookings/lookup', { code, phone }),
   cancelBooking: (code, phone) => request('POST', '/bookings/cancel', { code, phone }),
+  rescheduleBooking: (code, phone, date, startHour) =>
+    request('POST', '/bookings/reschedule', { code, phone, date, startHour }),
 };
 
 const a = (method, path, body) => request(method, path, body, { admin: true });

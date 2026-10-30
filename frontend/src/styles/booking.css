@@ -823,3 +823,25 @@ button.step-btn {
   text-transform: none;
   letter-spacing: 0;
 }
+
+.book-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.book-title-row .day-view-help {
+  margin-left: 0;
+}
+
+.lane-preview-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.lane-preview-bar .board-help {
+  margin-left: 0;
+}

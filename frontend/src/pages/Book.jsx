@@ -11,6 +11,8 @@ import { startOptions, promoFreeHours } from '../lib/schedule.js';
 import { addDays, dateLabel, hourLabel, hoursText, peso, rangeLabel, weekdayOf } from '../lib/format.js';
 import { ScheduleBoard } from '../components/ScheduleBoard.jsx';
 import { Field, Stepper } from '../components/ui.jsx';
+import { HowToBook, claimTour } from '../components/HowToBook.jsx';
+import { Legend } from '../components/DayView.jsx';
 
 const STEPS = ['Time', 'Your details', 'Review'];
 const DRAFT_KEY = 'booking_details_draft';
@@ -59,6 +61,14 @@ function BookingFlow({ siteData }) {
   const paramStart = params.get('start');
 
   const [step, setStep] = useState(0);
+
+  // First visit: show a short animated walkthrough. "How to book" reopens it.
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => claimTour('book') && setTourOpen(true), 500);
+    return () => clearTimeout(t);
+  }, []);
+  const onTourChange = setTourOpen;
   const [roomId, setRoomId] = useState(initialRoom?.id);
   const [date, setDate] = useState(paramDate && paramDate >= today ? paramDate : today);
   const [paidHours, setPaidHours] = useState(
@@ -190,7 +200,13 @@ function BookingFlow({ siteData }) {
   return (
     <div className="page book-page" ref={topRef}>
       <div className="wrap">
-        <h1 className="page-title">Book a room</h1>
+        <HowToBook variant="book" open={tourOpen} onOpenChange={onTourChange} hideKey="book" />
+        <div className="book-title-row">
+          <h1 className="page-title">Book a room</h1>
+          <button type="button" className="day-view-help" onClick={() => setTourOpen(true)}>
+            How to book
+          </button>
+        </div>
         <ol className="steps" aria-label="Booking steps">
           {STEPS.map((label, i) => (
             <li key={label} className={clsx('step', i === step && 'is-current', i < step && 'is-done')}>
@@ -288,6 +304,9 @@ function BookingFlow({ siteData }) {
                   />
                   {avail && room && avail.window.open && (
                     <div className="lane-preview">
+                      <div className="lane-preview-bar">
+                        <Legend isPublic />
+                      </div>
                       <ScheduleBoard
                         theme="light"
                         rooms={[room]}

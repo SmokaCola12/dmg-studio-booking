@@ -13,6 +13,10 @@ const AdminApp = lazy(() => import('./pages/admin/AdminApp.jsx'));
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
+  // Without this, a reload restores the old scroll position before the page content has loaded.
+  useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  }, []);
   useEffect(() => {
     if (hash) {
       const el = document.getElementById(hash.slice(1));

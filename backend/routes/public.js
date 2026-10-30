@@ -145,4 +145,46 @@ router.post('/bookings/cancel', (req, res) => {
   res.json({ booking: publicBooking(db.prepare('SELECT * FROM bookings WHERE id = ?').get(row.id)) });
 });
 
+// Same room and same paid hours; only the date and start time move. Same cutoff as cancelling.
+router.post('/bookings/reschedule', (req, res) => {
+  const row = findCustomerBooking(req.body?.code, req.body?.phone);
+  if (!row) return res.status(404).json({ error: 'No booking matches that code and mobile number.' });
+  if (!canCustomerCancel(row)) {
+    const s = getSettings();
+    return res.status(409).json({
+      error: `This booking can no longer be changed online. Bookings can be moved up to ${s.cancel_cutoff_hours} hours before the start time — message the studio instead.`,
+    });
+  }
+  if (!isValidDate(req.body?.date)) return res.status(400).json({ error: 'Pick a new date.' });
+  const date = req.body.date;
+  const startHour = toInt(req.body.startHour);
+  if (date === row.date && startHour === row.start_hour) {
+    return res.status(400).json({ error: 'That is the time you already have. Pick a different one.' });
+  }
+
+  const move = db.transaction(() => {
+    const fresh = db.prepare('SELECT * FROM bookings WHERE id = ?').get(row.id);
+    if (!canCustomerCancel(fresh)) return { ok: false, error: 'This booking can no longer be changed online.' };
+    const plan = planBooking({
+      roomId: fresh.room_id,
+      date,
+      startHour,
+      paidHours: fresh.paid_hours,
+      excludeBookingId: fresh.id,
+    });
+    if (!plan.ok) return plan;
+    db.prepare(
+      `UPDATE bookings SET date = ?, start_hour = ?, free_hours = ?, end_hour = ?, updated_at = datetime('now') WHERE id = ?`
+    ).run(date, plan.startHour, plan.freeHours, plan.endHour, fresh.id);
+    return { ok: true, freeNote: plan.freeNote };
+  });
+
+  const result = move();
+  if (!result.ok) return res.status(409).json({ error: result.error });
+  res.json({
+    booking: publicBooking(db.prepare('SELECT * FROM bookings WHERE id = ?').get(row.id)),
+    freeNote: result.freeNote,
+  });
+});
+
 export default router;

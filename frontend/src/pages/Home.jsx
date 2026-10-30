@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CalendarDays, MessageCircle, Navigation, Phone } from 'lucide-react';
+import { CalendarClock, CalendarDays, MessageCircle, Navigation, Phone } from 'lucide-react';
 import { site } from '../config/site.js';
 import { useSite } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
-import { ScheduleBoard } from '../components/ScheduleBoard.jsx';
+import { DayView } from '../components/DayView.jsx';
+import { HowToBook, claimTour } from '../components/HowToBook.jsx';
 import { addDays, dateLabel, hourLabel, peso, relativeDay, rangeLabel } from '../lib/format.js';
 import { promoText } from '../lib/schedule.js';
 
@@ -45,6 +46,15 @@ export default function Home() {
   const settings = siteData?.settings;
   const rooms = siteData?.rooms || [];
 
+  // Explain the board on every load until the visitor ticks "Never show this again". "How to book" reopens it.
+  const [tourOpen, setTourOpen] = useState(false);
+  useEffect(() => {
+    if (!siteData) return;
+    const t = setTimeout(() => claimTour('home') && setTourOpen(true), 500);
+    return () => clearTimeout(t);
+  }, [siteData]);
+  const onTourChange = setTourOpen;
+
   const items = useMemo(() => {
     if (!avail) return {};
     return Object.fromEntries(
@@ -71,6 +81,7 @@ export default function Home() {
 
   return (
     <>
+      <HowToBook open={tourOpen} onOpenChange={onTourChange} hideKey="home" />
       <section className="hero" aria-labelledby="hero-title">
         <div className="wrap">
           <div className="hero-intro">
@@ -81,6 +92,9 @@ export default function Home() {
               {site.name}
             </h1>
             <p className="hero-lead">{site.intro}</p>
+            <Link className="resched-nudge" to="/check">
+              <CalendarClock aria-hidden="true" /> Need to resched? Move your booking
+            </Link>
             {settings && (
               <dl className="hero-facts">
                 <div>
@@ -181,7 +195,9 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <ScheduleBoard
+              <DayView
+                isPublic
+                onHelp={() => setTourOpen(true)}
                 rooms={rooms}
                 openHour={settings.open_hour}
                 closeHour={settings.close_hour}
@@ -192,12 +208,6 @@ export default function Home() {
                 intro
               />
             )}
-
-            <div className="board-legend" aria-hidden="true">
-              <span><i className="lg lg-open" /> Open, tap to book</span>
-              <span><i className="lg lg-booked" /> Booked</span>
-              <span><i className="lg lg-now" /> Now</span>
-            </div>
           </div>
         </div>
       </section>
