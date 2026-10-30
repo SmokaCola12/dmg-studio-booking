@@ -1,0 +1,16 @@
+{
+  "name": "dmg-agents-api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Local HTTP API that runs the DMG Studio Claude Code agents from .claude/agents",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.314"
+  }
+}
