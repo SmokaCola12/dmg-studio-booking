@@ -5,7 +5,7 @@ A rehearsal studio website with online booking and a staff admin. Not Shopify �
 ## What's included
 
 **Public site**
-- Home: a live schedule for the day, styled like a DAW (each room is a track, each booking is a clip, the red line is now). Tap an open slot to jump straight into booking.
+- Home: a booking card up top (pick a room and hours, pick a day on the month calendar, pick a start time, Book now), then a live schedule for the day styled like a DAW (each room is a track, each booking is a clip, the red line is now). Tap an open slot on the board to jump straight into booking.
 - Rooms and rates, gallery, house rules, FAQ, map and contact.
 - Booking flow: room → date → number of hours → start time → details → review. The free hour promo is applied automatically when it fits.
 - Booking code and "Add to calendar" (.ics) after booking.

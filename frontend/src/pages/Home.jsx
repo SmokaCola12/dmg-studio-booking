@@ -1,22 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CalendarClock, CalendarDays, MessageCircle, Navigation, Phone } from 'lucide-react';
 import { site } from '../config/site.js';
 import { useSite } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
+import { Calendar } from '../components/Calendar.jsx';
 import { DayView } from '../components/DayView.jsx';
-import { HowToBook, claimTour } from '../components/HowToBook.jsx';
-import { addDays, dateLabel, hourLabel, peso, relativeDay, rangeLabel } from '../lib/format.js';
+import { BookingCard } from '../components/BookingCard.jsx';
+import { HowToBook } from '../components/HowToBook.jsx';
+import { addDays, dateLabel, hourLabel, hoursSentence, peso, relativeDay, rangeLabel } from '../lib/format.js';
 import { promoText } from '../lib/schedule.js';
-
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-function hoursSentence(settings) {
-  const range = `${hourLabel(settings.open_hour)} to ${hourLabel(settings.close_hour)}`;
-  if (!settings.closed_weekdays?.length) return `Open every day, ${range}`;
-  const closed = settings.closed_weekdays.map((d) => WEEKDAYS[d]).join(' and ');
-  return `Open ${range}, closed on ${closed}`;
-}
 
 /** "Room A is open until 6 PM" style summary of the current hour, for today only. */
 function nowSummary(rooms, avail, settings) {
@@ -39,21 +32,15 @@ export default function Home() {
   const navigate = useNavigate();
   const today = siteData?.now.date;
   const [date, setDate] = useState(null);
-  const dateInputRef = useRef(null);
+  const [calOpen, setCalOpen] = useState(false);
   const shownDate = date || today;
   const { data: avail, error: availError } = useAvailability(shownDate);
 
   const settings = siteData?.settings;
   const rooms = siteData?.rooms || [];
 
-  // Explain the board on every load until the visitor ticks "Never show this again". "How to book" reopens it.
+  // The tour no longer opens by itself on Home; "How to book" on the board still opens it.
   const [tourOpen, setTourOpen] = useState(false);
-  useEffect(() => {
-    if (!siteData) return;
-    const t = setTimeout(() => claimTour('home') && setTourOpen(true), 500);
-    return () => clearTimeout(t);
-  }, [siteData]);
-  const onTourChange = setTourOpen;
 
   const items = useMemo(() => {
     if (!avail) return {};
@@ -72,7 +59,6 @@ export default function Home() {
   const isToday = avail && avail.date === avail.now.date;
   const nowHour = isToday ? avail.now.hour + avail.now.minute / 60 : null;
   const earliest = avail?.window?.open ? avail.window.earliest : avail ? settings?.close_hour : null;
-  const cheapest = rooms.length ? Math.min(...rooms.map((r) => r.hourlyRate)) : null;
   const promo = promoText(settings);
 
   const startBooking = (room, hour) => {
@@ -81,39 +67,23 @@ export default function Home() {
 
   return (
     <>
-      <HowToBook open={tourOpen} onOpenChange={onTourChange} hideKey="home" />
+      <HowToBook open={tourOpen} onOpenChange={setTourOpen} hideKey="home" />
       <section className="hero" aria-labelledby="hero-title">
         <div className="wrap">
           <div className="hero-intro">
             <p className="hero-kicker label">
-              <i className="rec-dot" aria-hidden="true" /> Live room board
+              <i className="rec-dot" aria-hidden="true" /> {site.name}
             </p>
             <h1 id="hero-title" className="hero-title">
-              {site.name}
+              Book a room
             </h1>
-            <p className="hero-lead">{site.intro}</p>
+            <p className="hero-lead">Pick a day, a start time and a room. Your details come on the next page.</p>
             <Link className="resched-nudge" to="/check">
               <CalendarClock aria-hidden="true" /> Need to reschedule? Move your booking
             </Link>
-            {settings && (
-              <dl className="hero-facts">
-                <div>
-                  <dt className="label">Hours</dt>
-                  <dd>{hoursSentence(settings)}</dd>
-                </div>
-                {cheapest !== null && (
-                  <div>
-                    <dt className="label">Rate</dt>
-                    <dd>From <span className="tnum">{peso(cheapest)}</span> an hour</dd>
-                  </div>
-                )}
-                <div>
-                  <dt className="label">Where</dt>
-                  <dd>{site.address[site.address.length - 1]}</dd>
-                </div>
-              </dl>
-            )}
           </div>
+
+          {settings && rooms.length > 0 && today && <BookingCard rooms={rooms} settings={settings} today={today} />}
 
           <div className="hero-board">
             <div className="board-bar">
@@ -123,7 +93,7 @@ export default function Home() {
                 </h2>
                 <p className="board-status" aria-live="polite">
                   {(avail && settings && nowSummary(rooms, avail, settings)) ||
-                    (avail && !avail.window.open ? avail.window.reason : 'Tap an open hour to start booking it.')}
+                    (avail && !avail.window.open ? avail.window.reason : 'The live board. Tap an open hour to start booking it.')}
                 </p>
               </div>
               {today && (
@@ -149,33 +119,26 @@ export default function Home() {
                         type="button"
                         className="day-btn"
                         aria-pressed={custom}
-                        onClick={() => {
-                          const el = dateInputRef.current;
-                          if (!el) return;
-                          try {
-                            el.showPicker();
-                          } catch {
-                            el.focus();
-                            el.click();
-                          }
-                        }}
+                        onClick={() => setCalOpen(true)}
                       >
                         <CalendarDays aria-hidden="true" />
                         {custom ? dateLabel(shownDate) : 'Other date'}
                       </button>
                     );
                   })()}
-                  <input
-                    ref={dateInputRef}
-                    className="day-date-input"
-                    type="date"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    min={today}
-                    max={settings ? addDays(today, settings.max_days_ahead) : undefined}
-                    value={shownDate || ''}
-                    onChange={(e) => e.target.value && setDate(e.target.value)}
-                  />
+                  {calOpen && (
+                    <Calendar
+                      value={shownDate}
+                      min={today}
+                      max={settings ? addDays(today, settings.max_days_ahead) : undefined}
+                      closedWeekdays={settings?.closed_weekdays}
+                      onPick={(d) => {
+                        setDate(d);
+                        setCalOpen(false);
+                      }}
+                      onClose={() => setCalOpen(false)}
+                    />
+                  )}
                 </div>
               )}
             </div>

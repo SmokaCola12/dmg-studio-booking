@@ -8,7 +8,9 @@ import { useSite } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
 import { api } from '../lib/api.js';
 import { startOptions, promoFreeHours } from '../lib/schedule.js';
-import { addDays, dateLabel, hourLabel, hoursText, peso, rangeLabel, weekdayOf } from '../lib/format.js';
+import { addDays, dateLabel, hourLabel, hoursText, peso, rangeLabel } from '../lib/format.js';
+import { MonthCalendar } from '../components/MonthCalendar.jsx';
+import { useMonthAvailability } from '../lib/useMonthAvailability.js';
 import { DayView } from '../components/DayView.jsx';
 import { Field, Stepper } from '../components/ui.jsx';
 import { HowToBook, claimTour } from '../components/HowToBook.jsx';
@@ -58,6 +60,7 @@ function BookingFlow({ siteData }) {
   const initialRoom = rooms.find((r) => String(r.id) === params.get('room')) || rooms[0];
   const paramDate = params.get('date');
   const paramStart = params.get('start');
+  const paramHours = params.get('hours');
 
   const [step, setStep] = useState(0);
 
@@ -70,9 +73,11 @@ function BookingFlow({ siteData }) {
   const onTourChange = setTourOpen;
   const [roomId, setRoomId] = useState(initialRoom?.id);
   const [date, setDate] = useState(paramDate && paramDate >= today ? paramDate : today);
-  const [paidHours, setPaidHours] = useState(
-    clamp(settings.promo_enabled ? settings.promo_buy_hours : settings.min_hours, settings.min_hours, settings.max_hours)
-  );
+  const [paidHours, setPaidHours] = useState(() => {
+    const fromUrl = Number.parseInt(paramHours, 10);
+    if (Number.isInteger(fromUrl) && String(fromUrl) === paramHours) return clamp(fromUrl, settings.min_hours, settings.max_hours);
+    return clamp(settings.promo_enabled ? settings.promo_buy_hours : settings.min_hours, settings.min_hours, settings.max_hours);
+  });
   const [startHour, setStartHour] = useState(paramStart !== null ? Number(paramStart) : null);
   const [details, setDetails] = useState(() => ({
     name: '',
@@ -258,7 +263,7 @@ function BookingFlow({ siteData }) {
 
                 <section className="book-block" aria-labelledby="pick-date">
                   <h2 id="pick-date" className="block-title">Date</h2>
-                  <DateStrip value={date} onChange={setDate} today={today} settings={settings} />
+                  <DatePicker value={date} onChange={setDate} today={today} settings={settings} />
                 </section>
 
                 <section className="book-block" aria-labelledby="pick-length">
@@ -317,9 +322,9 @@ function BookingFlow({ siteData }) {
                             ...busy.map((b) => ({ ...b, label: b.kind === 'block' ? 'Closed' : 'Booked' })),
                             ...(selected
                               ? [
-                                  { kind: 'selection', start: selected.hour, end: selected.hour + paidHours, label: 'Your booking', id: 'sel' },
+                                  { kind: 'selection', start: selected.hour, end: selected.hour + paidHours, label: `Your pick · ${hoursText(paidHours)}`, id: 'sel' },
                                   ...(freeHours
-                                    ? [{ kind: 'free-bonus', start: selected.hour + paidHours, end: endHour, label: 'Free', id: 'free' }]
+                                    ? [{ kind: 'free-bonus', start: selected.hour + paidHours, end: endHour, label: 'Bonus hour · free', id: 'free' }]
                                     : []),
                                 ]
                               : []),
@@ -335,6 +340,7 @@ function BookingFlow({ siteData }) {
                           }
                         }}
                         freeLabel="Start at"
+                        listReadOnly
                       />
                     </div>
                   )}
@@ -447,54 +453,31 @@ function BookingFlow({ siteData }) {
   );
 }
 
-function DateStrip({ value, onChange, today, settings }) {
-  const stripRef = useRef(null);
-  const days = useMemo(
-    () => Array.from({ length: settings.max_days_ahead + 1 }, (_, i) => addDays(today, i)),
-    [today, settings.max_days_ahead]
-  );
+/** Same month calendar as the home page card, so both pages pick a day the same way. */
+function DatePicker({ value, onChange, today, settings }) {
+  const [month, setMonth] = useState(value.slice(0, 7));
+  const { data, error, loading } = useMonthAvailability(month);
+  const dayMap = useMemo(() => Object.fromEntries((data?.days || []).map((d) => [d.date, d])), [data]);
 
+  // Follow the date if it changes from outside (e.g. a prefilled link).
   useEffect(() => {
-    const el = stripRef.current?.querySelector('[aria-checked="true"]');
-    el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    setMonth(value.slice(0, 7));
   }, [value]);
 
   return (
-    <div className="date-strip-wrap">
-      <div className="date-strip" ref={stripRef} role="radiogroup" aria-label="Date">
-        {days.map((d, i) => {
-          const closed = settings.closed_weekdays.includes(weekdayOf(d));
-          const [wd, md] = dateLabel(d).split(', ');
-          const showMonth = i === 0 || d.endsWith('-01');
-          return (
-            <button
-              key={d}
-              type="button"
-              role="radio"
-              aria-checked={d === value}
-              aria-label={`${dateLabel(d, { long: true })}${closed ? ', closed' : ''}`}
-              className="date-pill"
-              disabled={closed}
-              onClick={() => onChange(d)}
-            >
-              <span className="date-pill-wd">{i === 0 ? 'Today' : wd}</span>
-              <span className="date-pill-day tnum">{md.split(' ')[1]}</span>
-              <span className="date-pill-mo">{showMonth || d === value ? md.split(' ')[0] : ' '}</span>
-            </button>
-          );
-        })}
-      </div>
-      <label className="date-jump">
-        <span>Or pick a date</span>
-        <input
-          type="date"
-          className="input"
-          min={today}
-          max={days[days.length - 1]}
-          value={value}
-          onChange={(e) => e.target.value && onChange(e.target.value)}
-        />
-      </label>
+    <div className="book-cal">
+      <MonthCalendar
+        month={month}
+        onMonthChange={setMonth}
+        value={value}
+        min={today}
+        max={addDays(today, settings.max_days_ahead)}
+        closedWeekdays={settings.closed_weekdays}
+        days={dayMap}
+        loading={loading}
+        onPick={onChange}
+      />
+      {error && <p className="bk-note" role="alert">{error.message} Days may show as open when they are not.</p>}
     </div>
   );
 }

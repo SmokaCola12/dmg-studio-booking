@@ -157,6 +157,34 @@
   margin-bottom: 12px;
 }
 
+.admin-cal {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.admin-cal-date {
+  margin-bottom: 4px;
+  font-size: var(--t-md);
+  font-weight: 720;
+  color: var(--marigold, inherit);
+}
+.admin-cal-day .a-h3:first-of-type {
+  margin-top: 8px;
+}
+@media (max-width: 760px) {
+  .admin-cal {
+    grid-template-columns: 1fr;
+  }
+}
+
+.a-h3 {
+  margin: 16px 0 8px;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  color: var(--ink-2, inherit);
+}
+
 .a-link {
   font-size: var(--t-sm);
   font-weight: 600;

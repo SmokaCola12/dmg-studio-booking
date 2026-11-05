@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { db, getSettings, saveSettings, parseRoom, DEFAULT_SETTINGS } from '../db.js';
 import { checkPassword, issueToken, requireAdmin, loginThrottle } from '../lib/auth.js';
 import { studioNow, isValidDate, addDays, weekday } from '../lib/time.js';
-import { planBooking, roomBusy, overlaps } from '../lib/scheduling.js';
+import { planBooking, roomBusy, overlaps, isValidMonth } from '../lib/scheduling.js';
 import { normalizePhone, cleanText, isEmail, bookingCode, toInt } from '../lib/validate.js';
 
 const router = Router();
@@ -276,6 +276,30 @@ router.get('/schedule', (req, res) => {
     .all(date)
     .map(parseRoom);
   res.json({ date, now: studioNow(), settings: getSettings(), rooms, bookings, blocks });
+});
+
+// Per-day booking counts for a month, for the staff calendar. Cancelled and no-show bookings are left out.
+router.get('/calendar', (req, res) => {
+  const month = req.query.month || studioNow().date.slice(0, 7);
+  if (!isValidMonth(month)) return res.status(400).json({ error: 'Use a month like 2026-10.' });
+  const from = `${month}-01`;
+  const to = `${month}-31`;
+  const days = {};
+  const day = (date) => (days[date] ||= { bookings: 0, pending: 0, blocks: 0 });
+  const bookings = db
+    .prepare(
+      `SELECT date, status, COUNT(*) AS n FROM bookings
+       WHERE date BETWEEN ? AND ? AND status IN ('pending', 'confirmed', 'completed') GROUP BY date, status`,
+    )
+    .all(from, to);
+  for (const r of bookings) {
+    const d = day(r.date);
+    d.bookings += r.n;
+    if (r.status === 'pending') d.pending += r.n;
+  }
+  const blocks = db.prepare('SELECT date, COUNT(*) AS n FROM blocks WHERE date BETWEEN ? AND ? GROUP BY date').all(from, to);
+  for (const r of blocks) day(r.date).blocks += r.n;
+  res.json({ month, days });
 });
 
 router.post('/blocks', (req, res) => {

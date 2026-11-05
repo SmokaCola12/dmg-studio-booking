@@ -59,6 +59,16 @@ export function relativeDay(s, today) {
 
 export const weekdayOf = (s) => toDate(s).getUTCDay();
 
+const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** "Open 10 AM to 10 PM, closed on Monday" */
+export function hoursSentence(settings) {
+  const range = `${hourLabel(settings.open_hour)} to ${hourLabel(settings.close_hour)}`;
+  if (!settings.closed_weekdays?.length) return `Open every day, ${range}`;
+  const closed = settings.closed_weekdays.map((d) => WEEKDAY_NAMES[d]).join(' and ');
+  return `Open ${range}, closed on ${closed}`;
+}
+
 export function formatPhone(p) {
   if (!p || p.length !== 11) return p || '';
   return `${p.slice(0, 4)} ${p.slice(4, 7)} ${p.slice(7)}`;

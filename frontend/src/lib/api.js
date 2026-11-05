@@ -66,6 +66,7 @@ const query = (params = {}) => {
 export const api = {
   site: () => request('GET', '/site'),
   availability: (date) => request('GET', `/availability${query({ date })}`),
+  availabilityMonth: (month) => request('GET', `/availability/month${query({ month })}`),
   createBooking: (payload) => request('POST', '/bookings', payload),
   lookupBooking: (code, phone) => request('POST', '/bookings/lookup', { code, phone }),
   cancelBooking: (code, phone) => request('POST', '/bookings/cancel', { code, phone }),
@@ -83,6 +84,7 @@ export const adminApi = {
   createBooking: (payload) => a('POST', '/admin/bookings', payload),
   updateBooking: (id, patch) => a('PATCH', `/admin/bookings/${id}`, patch),
   schedule: (date) => a('GET', `/admin/schedule${query({ date })}`),
+  calendar: (month) => a('GET', `/admin/calendar${query({ month })}`),
   createBlock: (payload) => a('POST', '/admin/blocks', payload),
   deleteBlock: (id) => a('DELETE', `/admin/blocks/${id}`),
   rooms: () => a('GET', '/admin/rooms'),
