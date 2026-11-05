@@ -143,8 +143,7 @@ const SCENES = {
 
 const HOME_STEPS = [
   { scene: 'day', title: 'Pick a day', line: 'Today, tomorrow or another date.' },
-  { scene: 'list', title: 'List: tap Book', line: 'Open times are listed for each room.' },
-  { scene: 'timeline', title: 'Timeline: tap an empty hour', line: 'Gaps are open. Colored bars are taken.' },
+  { scene: 'timeline', title: 'Tap an empty hour', line: 'Gaps are open. Colored bars are taken.' },
   { scene: 'hours', title: 'Choose how many hours', line: 'Only times that fit can be picked.' },
   { scene: 'confirm', title: 'Add your details, confirm', line: 'You get a booking code. Find it later in My booking.' },
 ];

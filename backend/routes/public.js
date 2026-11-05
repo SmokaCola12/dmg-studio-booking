@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { db, getSettings, parseRoom } from '../db.js';
 import { studioNow, isValidDate, STUDIO_TZ } from '../lib/time.js';
-import { dateWindow, planBooking, roomBusy, canCustomerCancel } from '../lib/scheduling.js';
+import { dateWindow, planBooking, roomBusy, canCustomerCancel, monthAvailability, isValidMonth } from '../lib/scheduling.js';
 import { normalizePhone, cleanText, isEmail, bookingCode, toInt } from '../lib/validate.js';
 
 const router = Router();
@@ -61,6 +61,12 @@ router.get('/availability', (req, res) => {
     window: dateWindow(date),
     rooms: rooms.map((r) => ({ id: r.id, busy: roomBusy(r.id, date) })),
   });
+});
+
+router.get('/availability/month', (req, res) => {
+  const month = req.query.month;
+  if (!isValidMonth(month)) return res.status(400).json({ error: 'Use a month like 2026-10.' });
+  res.json(monthAvailability(month));
 });
 
 router.post('/bookings', (req, res) => {

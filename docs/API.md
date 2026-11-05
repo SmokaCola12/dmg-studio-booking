@@ -29,6 +29,19 @@ Busy hours per room for a day. `date` defaults to today.
 Response: `{ date, now, window, rooms: [{ id, busy: [...] }] }`
 Errors: `400` for a bad date.
 
+### `GET /api/availability/month?month=YYYY-MM`
+Read-only summary of every day in a month, for calendars. Uses the same rules as `/availability`: pending and confirmed bookings and blocks take a slot (a block with no room blocks every room), cancelled bookings do not.
+
+Response: `{ month, now, days: [{ date, status, freeHours, reason? }] }`, one entry per day.
+
+- `closed`: the day cannot be booked (past, beyond `max_days_ahead`, closed weekday, or no slots left today). `reason` explains why; `freeHours` is 0.
+- `full`: no active room has `min_hours` free in a row between the earliest start and closing.
+- `few`: fewer than 3 bookable start hours across all active rooms.
+- `open`: otherwise.
+
+`freeHours` is the free hours summed across active rooms between the earliest start and closing.
+Errors: `400` for a missing or malformed month.
+
 ### `POST /api/bookings`
 Create an online booking. Status becomes `confirmed` if `auto_confirm` is on, otherwise `pending`. Availability is re-checked inside a database transaction, so concurrent requests cannot double-book.
 
@@ -92,6 +105,7 @@ Admin `booking` objects add `id, roomId, roomName, roomColor, source, adminNotes
 | Method | Path | What it does |
 | --- | --- | --- |
 | `GET` | `/schedule?date=` | Day view: `{ date, now, settings, rooms, bookings, blocks }`. |
+| `GET` | `/calendar?month=YYYY-MM` | Counts for the staff calendar: `{ month, days: { "YYYY-MM-DD": { bookings, pending, blocks } } }`. Pending, confirmed and completed bookings count; cancelled and no-show do not. Days with nothing are left out. Defaults to the current month. `400` for a bad month. |
 | `POST` | `/blocks` | Block time. Body: `{ roomId (null = all rooms), date, startHour, endHour, reason }`. Response `201`: `{ id }`. `409` if a booking is in that time. |
 | `DELETE` | `/blocks/:id` | Remove a block. Response: `{ ok: true }`. |
 

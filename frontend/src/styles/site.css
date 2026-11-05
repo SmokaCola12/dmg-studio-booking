@@ -878,3 +878,447 @@
   color: var(--ink-2);
   max-width: 60ch;
 }
+
+/* Phone only: 44px tap targets. Tablet and up are untouched. */
+@media (max-width: 640px) {
+  .nav-link {
+    padding-block: 13px;
+  }
+  .nav-cta {
+    min-height: 44px;
+    padding-inline: 14px;
+  }
+  .day-btn {
+    min-height: 44px;
+  }
+}
+
+/* Date picker sheet (replaces the browser's own calendar) */
+.cal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(10 6 18 / 0.6);
+}
+.cal {
+  width: min(340px, 100%);
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-l, 16px);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.45);
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.cal-month {
+  flex: 1;
+  text-align: center;
+}
+.cal-nav {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.cal-nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.cal-nav svg {
+  width: 20px;
+  height: 20px;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+.cal-wd {
+  padding-block: 4px;
+  color: var(--ink-3);
+  font-size: var(--t-sm);
+  font-weight: 650;
+}
+.cal-day {
+  aspect-ratio: 1;
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.cal-day:disabled {
+  color: var(--ink-3);
+  opacity: 0.35;
+  cursor: default;
+}
+.cal-day--today {
+  border-color: var(--line-strong);
+}
+.cal-day--on {
+  border-color: var(--marigold);
+  background: var(--marigold);
+  color: var(--marigold-ink);
+}
+.cal-note {
+  margin-top: 10px;
+  color: var(--ink-3);
+  font-size: var(--t-sm);
+  text-align: center;
+}
+
+/* Home booking card (sits on the dark hero) */
+.bk {
+  margin-top: clamp(24px, 4vw, 36px);
+  border: 1px solid var(--plum-800);
+  border-radius: var(--radius-l);
+  background: var(--plum-900);
+  color: var(--plum-100);
+}
+.bk-head,
+.bk-facts,
+.bk-options,
+.bk-pick,
+.bk-foot {
+  padding: 16px clamp(14px, 3vw, 24px);
+}
+.bk-head {
+  border-bottom: 1px solid var(--plum-800);
+}
+.bk-title {
+  font-size: var(--t-md);
+  font-weight: 750;
+  font-stretch: 112%;
+  color: #fff;
+}
+.bk-desc {
+  margin-top: 4px;
+  max-width: 70ch;
+  font-size: var(--t-sm);
+  color: var(--plum-300);
+}
+.bk-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin: 0;
+  border-bottom: 1px solid var(--plum-800);
+  font-size: var(--t-sm);
+}
+.bk-facts dd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  margin: 0;
+}
+.bk-facts svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--marigold);
+}
+.bk-facts a {
+  color: inherit;
+  text-decoration: underline;
+}
+.bk-options {
+  display: grid;
+  gap: 14px 32px;
+  border-bottom: 1px solid var(--plum-800);
+}
+@media (min-width: 720px) {
+  .bk-options {
+    grid-template-columns: 1fr auto;
+  }
+}
+.bk-opt .label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--marigold);
+}
+.bk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bk-chip,
+.bk-slot {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--plum-600);
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.bk-chip small {
+  margin-left: 4px;
+  font-weight: 500;
+  color: var(--plum-300);
+}
+.bk-chip--narrow {
+  min-width: 56px;
+  padding-inline: 10px;
+}
+.bk-chip[aria-checked='true'],
+.bk-slot[aria-checked='true'] {
+  border-color: var(--marigold);
+  background: var(--marigold);
+  color: var(--marigold-ink);
+}
+.bk-chip[aria-checked='true'] small {
+  color: var(--marigold-ink);
+}
+.bk-chip:hover:not([aria-checked='true']),
+.bk-slot:hover:not([aria-checked='true']) {
+  background: var(--plum-800);
+}
+.bk-pick {
+  display: grid;
+  gap: 20px 28px;
+}
+@media (min-width: 760px) {
+  .bk-pick {
+    grid-template-columns: minmax(280px, 380px) 1fr;
+    align-items: start;
+  }
+}
+.bk-times {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.bk-day {
+  font-size: var(--t-base);
+  font-weight: 700;
+  color: var(--marigold);
+}
+.bk-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.bk-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.bk-slot-skel {
+  height: 44px;
+}
+.bk-left {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--plum-800);
+  color: var(--plum-100);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+.bk-left.is-last {
+  color: var(--marigold);
+}
+.bk-slot[aria-checked='true'] .bk-left {
+  background: rgb(47 33 0 / 0.15);
+  color: var(--marigold-ink);
+}
+.bk-empty,
+.bk-note {
+  font-size: var(--t-sm);
+  color: var(--plum-300);
+}
+.bk-note {
+  margin-top: 10px;
+}
+.bk-link {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--marigold);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.bk-hint {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: var(--t-sm);
+  color: #ffb3b0;
+}
+.bk-hint.is-ready {
+  color: var(--plum-100);
+}
+.bk-foot {
+  border-top: 1px solid var(--plum-800);
+}
+
+/* Month calendar */
+.mc {
+  padding: 12px;
+  border-radius: var(--radius-l);
+  background: var(--plum-950);
+}
+.mc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.mc-title {
+  padding-left: 6px;
+  font-size: var(--t-base);
+  font-weight: 700;
+  color: #fff;
+}
+.mc-nav {
+  display: flex;
+}
+.mc-nav button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+.mc-nav button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.mc-nav svg {
+  width: 20px;
+  height: 20px;
+}
+.mc-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  text-align: center;
+}
+.mc-wd {
+  padding-block: 4px;
+  font-size: var(--t-xs);
+  font-weight: 650;
+  color: var(--plum-300);
+}
+.mc-day {
+  position: relative;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.mc-day:hover:not(:disabled):not(.is-on) {
+  background: var(--plum-800);
+}
+.mc-day:disabled {
+  color: var(--plum-300);
+  opacity: 0.4;
+  cursor: default;
+}
+.mc-day.is-today {
+  border-color: var(--plum-600);
+}
+.mc-day--open::after,
+.mc-day--few::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+.mc-day--few::after {
+  background: var(--marigold);
+}
+.mc-day.is-on {
+  border-color: var(--marigold);
+  background: var(--marigold);
+  color: var(--marigold-ink);
+}
+.mc-day.is-on::after {
+  background: var(--marigold-ink);
+}
+.mc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  padding-inline: 6px;
+  font-size: var(--t-xs);
+  color: var(--plum-300);
+}
+.mc-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+.mc-dot--few {
+  background: var(--marigold);
+}
+/* Staff calendar: booking count under the day number */
+.mc--marks .mc-day {
+  min-height: 56px;
+  padding-bottom: 16px;
+}
+.mc-count {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--plum-700);
+  color: var(--plum-100);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 15px;
+}
+.mc-count--pending {
+  background: var(--marigold);
+  color: var(--marigold-ink);
+}
+.mc-day.is-on .mc-count {
+  background: var(--marigold-ink);
+  color: var(--marigold);
+}
+@media (max-width: 380px) {
+  .mc {
+    padding: 8px;
+  }
+}

@@ -1270,3 +1270,19 @@ button.clip:active {
   .resched-nudge svg { animation: none; }
   .tour-stage *, .tour-stage { animation-duration: 0.001s !important; animation-iteration-count: 1 !important; animation-fill-mode: forwards !important; }
 }
+
+/* Phone only: 44px tap targets. Tablet and up are untouched. */
+@media (max-width: 640px) {
+  .day-view .seg-btn {
+    height: 44px;
+  }
+  .day-view-help {
+    min-height: 44px;
+    padding-inline: 4px;
+  }
+  .dialog-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+

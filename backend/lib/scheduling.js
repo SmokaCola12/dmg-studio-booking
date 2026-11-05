@@ -1,5 +1,5 @@
 import { db, getSettings } from '../db.js';
-import { studioNow, daysBetween, weekday, hoursUntil } from './time.js';
+import { studioNow, daysBetween, weekday, hoursUntil, addDays } from './time.js';
 
 const ACTIVE_STATUSES = ['pending', 'confirmed'];
 
@@ -60,6 +60,66 @@ export function dateWindow(date, { ignoreLeadTime = false } = {}) {
   }
   if (earliest >= s.close_hour) return { open: false, reason: 'No more slots left today.' };
   return { open: true, earliest, openHour: s.open_hour, closeHour: s.close_hour };
+}
+
+const FEW_START_HOURS = 3;
+
+/** True for "YYYY-MM" with a month from 01 to 12. */
+export function isValidMonth(s) {
+  return typeof s === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+}
+
+/**
+ * Per-day availability summary for a month (read-only, two range queries).
+ * status: closed (dateWindow not open), full (no active room has min_hours free in a row),
+ * few (fewer than 3 bookable start hours across all active rooms), else open.
+ * freeHours = free hours summed across active rooms between the earliest start and closing.
+ */
+export function monthAvailability(month) {
+  const s = getSettings();
+  const first = `${month}-01`;
+  const dates = [];
+  for (let d = first; d.slice(0, 7) === month; d = addDays(d, 1)) dates.push(d);
+  const last = dates[dates.length - 1];
+
+  const rooms = db.prepare('SELECT id FROM rooms WHERE active = 1').all();
+  const bookings = db
+    .prepare(
+      `SELECT room_id, date, start_hour, end_hour FROM bookings
+       WHERE date BETWEEN ? AND ? AND status IN (${ACTIVE_STATUSES.map(() => '?').join(',')})`
+    )
+    .all(first, last, ...ACTIVE_STATUSES);
+  const blocks = db.prepare('SELECT room_id, date, start_hour, end_hour FROM blocks WHERE date BETWEEN ? AND ?').all(first, last);
+
+  const byDate = new Map();
+  for (const row of [...bookings.map((b) => ({ ...b, kind: 'b' })), ...blocks.map((b) => ({ ...b, kind: 'k' }))]) {
+    if (!byDate.has(row.date)) byDate.set(row.date, []);
+    byDate.get(row.date).push(row);
+  }
+
+  const days = dates.map((date) => {
+    const win = dateWindow(date);
+    if (!win.open) return { date, status: 'closed', freeHours: 0, reason: win.reason };
+
+    const rows = byDate.get(date) || [];
+    let freeHours = 0;
+    let startHours = 0;
+    for (const room of rooms) {
+      const busy = rows
+        .filter((r) => (r.kind === 'k' ? r.room_id === null || r.room_id === room.id : r.room_id === room.id))
+        .map((r) => ({ start: r.start_hour, end: r.end_hour }));
+      for (let h = win.earliest; h < win.closeHour; h++) {
+        if (!overlaps(busy, h, h + 1)) freeHours++;
+      }
+      for (let h = win.earliest; h + s.min_hours <= win.closeHour; h++) {
+        if (!overlaps(busy, h, h + s.min_hours)) startHours++;
+      }
+    }
+    const status = startHours === 0 ? 'full' : startHours < FEW_START_HOURS ? 'few' : 'open';
+    return { date, status, freeHours };
+  });
+
+  return { month, now: studioNow(), days };
 }
 
 /**

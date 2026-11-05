@@ -32,7 +32,7 @@ function openStretches(roomItems, openHour, closeHour, earliest) {
   return stretches;
 }
 
-function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, onSelectClip, onSelectFree }) {
+function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, pickOnly, onSelectClip, onSelectFree }) {
   return (
     <div className="simple-day">
       {rooms.map((room) => {
@@ -41,7 +41,7 @@ function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, onSe
           ...roomItems
             .filter((it) => LISTED.includes(it.kind))
             .map((it) => ({ type: it.kind, start: it.start, end: it.end, it })),
-          ...openStretches(roomItems, openHour, closeHour, earliest).map(([start, end]) => ({ type: 'open', start, end })),
+          ...(pickOnly ? [] : openStretches(roomItems, openHour, closeHour, earliest)).map(([start, end]) => ({ type: 'open', start, end })),
         ].sort((a, b) => a.start - b.start);
 
         return (
@@ -51,7 +51,7 @@ function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, onSe
               {room.name}
             </h3>
             {rows.length === 0 ? (
-              <p className="simple-empty">Nothing open for the rest of the day.</p>
+              <p className="simple-empty">{pickOnly ? 'Pick a start time above to see it here.' : 'Nothing open for the rest of the day.'}</p>
             ) : (
               <ul className="simple-rows">
                 {rows.map((row) => (
@@ -78,7 +78,7 @@ function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, onSe
                     )}
                     {row.type === 'open' && (
                       <>
-                        <span className="simple-what simple-what--muted">Open</span>
+                        <span className="simple-what simple-what--muted">{isPublic ? 'Still open' : 'Open'}</span>
                         {onSelectFree && (
                           <button type="button" className="simple-act simple-act--primary" onClick={() => onSelectFree(room, row.start)}>
                             {isPublic ? 'Book' : 'Add booking'}
@@ -181,11 +181,16 @@ export function DayView({
   onSelectClip,
   onSelectFree,
   freeLabel,
+  listReadOnly = false,
+  timelineOnly = false,
   theme = isPublic ? 'dark' : 'light',
   boardProps,
 }) {
   const storeKey = isPublic ? 'dmg-site-day-view' : 'dmg-admin-day-view';
-  const [view, setView] = useState(() => readStored(storeKey, 'list'));
+  const [stored, setView] = useState(() => readStored(storeKey, 'list'));
+  // The public site and any `timelineOnly` caller get the timeline without a switch.
+  const noList = isPublic || timelineOnly;
+  const view = noList ? 'timeline' : stored;
   const choose = (v) => {
     setView(v);
     try {
@@ -199,14 +204,16 @@ export function DayView({
   return (
     <div className={clsx('day-view', theme === 'dark' && 'day-view--dark')}>
       <div className="day-view-bar">
-        <div className="seg" role="group" aria-label="Schedule view">
-          <button type="button" className="seg-btn" aria-pressed={view === 'list'} onClick={() => choose('list')}>
-            List
-          </button>
-          <button type="button" className="seg-btn" aria-pressed={view === 'timeline'} onClick={() => choose('timeline')}>
-            Timeline
-          </button>
-        </div>
+        {!noList && (
+          <div className="seg" role="group" aria-label="Schedule view">
+            <button type="button" className="seg-btn" aria-pressed={view === 'list'} onClick={() => choose('list')}>
+              List
+            </button>
+            <button type="button" className="seg-btn" aria-pressed={view === 'timeline'} onClick={() => choose('timeline')}>
+              Timeline
+            </button>
+          </div>
+        )}
         {!isPublic && (
           <span className="day-view-hours tnum">
             Open {hourLabel(openHour)} to {hourLabel(closeHour)}
@@ -228,8 +235,9 @@ export function DayView({
           items={items}
           earliest={listEarliest}
           isPublic={isPublic}
+          pickOnly={listReadOnly}
           onSelectClip={onSelectClip}
-          onSelectFree={onSelectFree}
+          onSelectFree={listReadOnly ? undefined : onSelectFree}
         />
       ) : (
         <ScheduleBoard

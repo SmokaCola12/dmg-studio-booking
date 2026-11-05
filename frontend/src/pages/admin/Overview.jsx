@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { adminApi } from '../../lib/api.js';
 import { dateLabel, peso, rangeLabel } from '../../lib/format.js';
 import { DayView } from '../../components/DayView.jsx';
+import { MonthCalendar } from '../../components/MonthCalendar.jsx';
 import { LoadError, PageHead, useAdmin, useLoader } from './admin-shared.jsx';
 import { BookingRow } from './BookingRow.jsx';
 import { BookingDialog } from './BookingDialog.jsx';
@@ -42,7 +43,12 @@ export default function Overview() {
   const { version, changed } = useAdmin();
   const overview = useLoader(() => adminApi.overview(), [version]);
   const today = overview.data?.now.date;
-  const day = useLoader(() => (today ? adminApi.schedule(today) : Promise.resolve(null)), [today, version]);
+  const [picked, setPicked] = useState(null);
+  const [month, setMonth] = useState(null);
+  const date = picked || today;
+  const shownMonth = month || today?.slice(0, 7);
+  const day = useLoader(() => (date ? adminApi.schedule(date) : Promise.resolve(null)), [date, version]);
+  const calendar = useLoader(() => (shownMonth ? adminApi.calendar(shownMonth) : Promise.resolve(null)), [shownMonth, version]);
   const [open, setOpen] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newDefaults, setNewDefaults] = useState(null);
@@ -50,6 +56,8 @@ export default function Overview() {
   const [confirming, setConfirming] = useState(null);
 
   const items = useMemo(() => (day.data ? boardItems(day.data) : {}), [day.data]);
+  const dayWaiting = day.data ? day.data.bookings.filter((b) => b.status === 'pending') : [];
+  const dayConfirmed = day.data ? day.data.bookings.filter((b) => b.status === 'confirmed' || b.status === 'completed') : [];
 
   const openBooking = (b) => {
     setOpen(b);
@@ -83,7 +91,7 @@ export default function Overview() {
           className="btn btn-dark"
           disabled={!day.data}
           onClick={() => {
-            setNewDefaults({ roomId: day.data.rooms[0]?.id, date: today });
+            setNewDefaults({ roomId: day.data.rooms[0]?.id, date });
             setNewOpen(true);
           }}
         >
@@ -114,41 +122,79 @@ export default function Overview() {
         </div>
       </dl>
 
-      {d && d.pending.length > 0 && (
-        <section className="a-section" aria-labelledby="pending-title">
+      {today && (
+        <section className="a-section" aria-labelledby="calendar-title">
           <div className="a-section-head">
-            <h2 id="pending-title" className="a-h2">
-              Waiting for approval
+            <h2 id="calendar-title" className="a-h2">
+              Calendar
             </h2>
-            {d.pendingCount > d.pending.length && (
-              <Link to="/admin/bookings?status=pending" className="a-link">
-                See all {d.pendingCount}
-              </Link>
+            {picked && picked !== today && (
+              <button type="button" className="a-link" onClick={() => { setPicked(null); setMonth(null); }}>
+                Back to today
+              </button>
             )}
           </div>
-          <ul className="b-list">
-            {d.pending.map((b) => (
-              <BookingRow
-                key={b.id}
-                booking={b}
-                today={today}
-                onOpen={openBooking}
-                showStatus={false}
-                action={
-                  <button type="button" className="btn btn-dark btn-sm" disabled={confirming === b.id} onClick={() => quickConfirm(b)}>
-                    {confirming === b.id ? 'Confirming…' : 'Confirm'}
-                  </button>
-                }
-              />
-            ))}
-          </ul>
+          <div className="admin-cal">
+            <MonthCalendar
+              month={shownMonth}
+              onMonthChange={setMonth}
+              value={date}
+              min="2000-01-01"
+              today={today}
+              marks={calendar.data?.month === shownMonth ? calendar.data.days : {}}
+              loading={calendar.loading}
+              onPick={setPicked}
+            />
+            <div className="admin-cal-day" aria-live="polite">
+              <h3 className="admin-cal-date">{dateLabel(date, { long: true })}</h3>
+              {!day.data ? (
+                <div className="skeleton" style={{ height: 96 }} />
+              ) : dayWaiting.length === 0 && dayConfirmed.length === 0 ? (
+                <p className="a-empty">No confirmed or waiting bookings on this day.</p>
+              ) : (
+                <>
+                  {dayWaiting.length > 0 && (
+                    <>
+                      <h4 className="a-h3">Waiting for approval</h4>
+                      <ul className="b-list">
+                        {dayWaiting.map((b) => (
+                          <BookingRow
+                            key={b.id}
+                            booking={b}
+                            today={today}
+                            onOpen={openBooking}
+                            showStatus={false}
+                            action={
+                              <button type="button" className="btn btn-dark btn-sm" disabled={confirming === b.id} onClick={() => quickConfirm(b)}>
+                                {confirming === b.id ? 'Confirming…' : 'Confirm'}
+                              </button>
+                            }
+                          />
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {dayConfirmed.length > 0 && (
+                    <>
+                      <h4 className="a-h3">Confirmed</h4>
+                      <ul className="b-list">
+                        {dayConfirmed.map((b) => (
+                          <BookingRow key={b.id} booking={b} today={today} onOpen={openBooking} showStatus={false} />
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </section>
       )}
 
       <section className="a-section" aria-labelledby="board-title">
         <div className="a-section-head">
           <h2 id="board-title" className="a-h2">
-            Today’s rooms
+            {date === today ? 'Today’s rooms' : `Rooms on ${date ? dateLabel(date, { long: true }) : ''}`}
           </h2>
           <Link to="/admin/schedule" className="a-link">
             Open schedule
@@ -156,14 +202,15 @@ export default function Overview() {
         </div>
         {day.data && s ? (
           <DayView
+            timelineOnly
             rooms={boardRooms(day.data)}
             openHour={s.open_hour}
             closeHour={s.close_hour}
             items={items}
-            nowHour={nowHour}
+            nowHour={date === today ? nowHour : null}
             onSelectClip={(it) => openBooking(it.data)}
             onSelectFree={(room, h) => {
-              setNewDefaults({ roomId: room.id, date: today, startHour: h });
+              setNewDefaults({ roomId: room.id, date, startHour: h });
               setNewOpen(true);
             }}
             freeLabel="New booking in"
