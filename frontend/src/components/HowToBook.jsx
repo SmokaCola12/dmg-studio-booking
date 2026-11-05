@@ -82,15 +82,17 @@ const SCENES = {
       <Cursor />
     </div>
   ),
-  day: (
-    <div className="sc sc-day">
-      <div className="sc-days">
-        <span className="sc-hl" />
-        <span>Today</span>
-        <span>Tomorrow</span>
-        <span>Other</span>
+  calendar: (
+    <div className="sc sc-cal">
+      <p className="sc-room"><i /> November</p>
+      <div className="sc-cal-grid">
+        {Array.from({ length: 14 }, (_, n) => (
+          <span key={n} className={n === 9 ? 'sc-cal-cell sc-cal-cell--target' : 'sc-cal-cell'}>
+            {n + 8}
+            {n === 9 && <Cursor />}
+          </span>
+        ))}
       </div>
-      <Cursor />
     </div>
   ),
   list: (
@@ -142,15 +144,16 @@ const SCENES = {
 };
 
 const HOME_STEPS = [
-  { scene: 'day', title: 'Pick a day', line: 'Today, tomorrow or another date.' },
-  { scene: 'timeline', title: 'Tap an empty hour', line: 'Gaps are open. Colored bars are taken.' },
-  { scene: 'hours', title: 'Choose how many hours', line: 'Only times that fit can be picked.' },
+  { scene: 'calendar', title: 'Pick a day on the calendar', line: 'A dot means there is room. Greyed days are full or closed.' },
+  { scene: 'hours', title: 'Choose your room and hours', line: 'Only times that fit can be picked.' },
+  { scene: 'time', title: 'Tap a start time', line: 'Open times only. Then press Book now.' },
+  { scene: 'timeline', title: 'Or tap an empty hour below', line: 'On the schedule, gaps are open. Colored bars are taken.' },
   { scene: 'confirm', title: 'Add your details, confirm', line: 'You get a booking code. Find it later in My booking.' },
 ];
 
 const BOOK_STEPS = [
   { scene: 'room', title: 'Pick a room', line: 'Each room has its own price and size.' },
-  { scene: 'day', title: 'Pick a day', line: 'Today, tomorrow or another date.' },
+  { scene: 'calendar', title: 'Pick a day on the calendar', line: 'A dot means there is room. Greyed days are full or closed.' },
   { scene: 'hours', title: 'Choose how many hours', line: 'Only times that fit can be picked.' },
   { scene: 'time', title: 'Tap a start time', line: 'Open times only. Then press Continue.' },
   { scene: 'confirm', title: 'Add your details, confirm', line: 'You get a booking code. Find it later in My booking.' },

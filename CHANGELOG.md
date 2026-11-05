@@ -19,6 +19,7 @@ Categories: **Added**, **Changed**, **Fixed**, **Removed**, **Security**.
 - Public Home and Book pages and the admin Today page no longer offer the List view; they show the timeline only. The admin Schedule page keeps both.
 
 ### Changed
+- "How to book" tour: new animated calendar picture and updated steps for the home card and the Book page (the old Today / Tomorrow / Other picture is gone).
 - Book page: the day picker is now the same month calendar as the home page card (open and few-left markers, full and closed days greyed), replacing the scrolling date strip and the "Or pick a date" popup.
 - Home page now opens with a plain booking card (room, hours, month calendar with open/few/full markers, start-time chips, "Book now" to /book with room, date, hours and start prefilled); the live board moves below it and the tour no longer opens by itself on Home. /book accepts a `hours` query param.
 - Date picker: "Or pick a date" and "Other date" open a small themed calendar instead of the browser one; days you cannot book are greyed.

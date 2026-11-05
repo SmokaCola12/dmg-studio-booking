@@ -1083,6 +1083,28 @@ button.clip:active {
   50%, 100% { transform: translate(370px, 84px); }
 }
 
+/* calendar scene: the cursor sits inside the target day and glides in from the side */
+.sc-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.sc-cal-cell {
+  position: relative;
+  padding: 8px 0;
+  border: 1px solid var(--plum-800);
+  border-radius: var(--radius-s);
+  background: var(--plum-850);
+  text-align: center;
+  font-weight: 650;
+}
+.sc-cal-cell--target { animation: tour-chip var(--loop) ease-in-out infinite; }
+.sc-cal-cell .tc { left: 50%; top: 50%; animation: tour-cur-cal var(--loop) ease-in-out infinite; }
+@keyframes tour-cur-cal {
+  0% { transform: translate(110px, 50px); }
+  40%, 100% { transform: translate(0, 2px); }
+}
+
 .sc-times {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
