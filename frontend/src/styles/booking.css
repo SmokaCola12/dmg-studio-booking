@@ -845,3 +845,7 @@ button.step-btn {
 .lane-preview-bar .board-help {
   margin-left: 0;
 }
+
+.summary-change {
+  margin: 4px 0 0 -10px;
+}

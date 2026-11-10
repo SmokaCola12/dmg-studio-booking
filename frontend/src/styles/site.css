@@ -1103,6 +1103,12 @@
     align-items: start;
   }
 }
+/* On the Book page the summary sits beside the main column, so stack until there is room. */
+@media (min-width: 760px) and (max-width: 1179px) {
+  .book-main .bk-pick {
+    grid-template-columns: 1fr;
+  }
+}
 .bk-times {
   display: flex;
   flex-direction: column;
