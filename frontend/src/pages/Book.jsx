@@ -62,12 +62,15 @@ function BookingFlow({ siteData }) {
   const paramStart = params.get('start');
   const paramHours = params.get('hours');
 
-  const [step, setStep] = useState(0);
+  // Coming from the home card with a time already picked: go straight to the details.
+  // If that time turns out not to fit, the check below sends them back to the picker.
+  const fromCard = paramStart !== null && Number.isInteger(Number(paramStart)) && Boolean(paramDate) && paramDate >= today && rooms.some((r) => String(r.id) === params.get('room'));
+  const [step, setStep] = useState(fromCard ? 1 : 0);
 
   // First visit: show a short animated walkthrough. "How to book" reopens it.
   const [tourOpen, setTourOpen] = useState(false);
   useEffect(() => {
-    const t = setTimeout(() => claimTour('book') && setTourOpen(true), 500);
+    const t = setTimeout(() => !fromCard && claimTour('book') && setTourOpen(true), 500);
     return () => clearTimeout(t);
   }, []);
   const onTourChange = setTourOpen;
@@ -103,6 +106,16 @@ function BookingFlow({ siteData }) {
     [avail, busy, settings, paidHours, date]
   );
   const selected = options.find((o) => o.hour === startHour && o.ok) || null;
+  // How many rooms can take each start hour, shown as "N left" like the home card.
+  const lefts = useMemo(() => {
+    if (!avail || avail.date !== date) return {};
+    const count = {};
+    for (const r of rooms) {
+      const opts = startOptions({ busy: avail.rooms.find((x) => x.id === r.id)?.busy || [], settings, window: avail.window, paidHours });
+      for (const o of opts) if (o.ok) count[o.hour] = (count[o.hour] || 0) + 1;
+    }
+    return count;
+  }, [avail, rooms, settings, paidHours, date]);
 
   // Drop a start time that no longer fits (room, date or length changed, or someone booked it).
   useEffect(() => {
@@ -113,6 +126,7 @@ function BookingFlow({ siteData }) {
         setSlotNotice(`${hourLabel(startHour)} doesn’t fit ${hoursText(paidHours)} on this day. Pick another start time.`);
       }
       setStartHour(null);
+      setStep(0);
     }
     checkedParamStart.current = true;
   }, [avail, date, options, startHour, paidHours, paramStart]);
@@ -154,7 +168,7 @@ function BookingFlow({ siteData }) {
       if (!selected) return;
       goTo(1);
     } else if (step === 1) {
-      if (validateDetails()) goTo(2);
+      if (validateDetails()) goTo(selected ? 2 : 0);
     } else {
       submit();
     }
@@ -261,11 +275,6 @@ function BookingFlow({ siteData }) {
                   </div>
                 </section>
 
-                <section className="book-block" aria-labelledby="pick-date">
-                  <h2 id="pick-date" className="block-title">Date</h2>
-                  <DatePicker value={date} onChange={setDate} today={today} settings={settings} />
-                </section>
-
                 <section className="book-block" aria-labelledby="pick-length">
                   <h2 id="pick-length" className="block-title">How long</h2>
                   <div className="length-row">
@@ -289,23 +298,39 @@ function BookingFlow({ siteData }) {
                 </section>
 
                 <section className="book-block" aria-labelledby="pick-time">
-                  <h2 id="pick-time" className="block-title">Start time</h2>
+                  <h2 id="pick-time" className="block-title">Date and time</h2>
                   {slotNotice && (
                     <div className="notice notice-warn" style={{ marginBottom: 14 }}>
                       <Info /> {slotNotice}
                     </div>
                   )}
-                  <TimePicker
-                    options={options}
-                    loading={availLoading && !avail}
-                    window={avail?.window}
-                    value={startHour}
-                    paidHours={paidHours}
-                    onChange={(h) => {
-                      setSlotNotice('');
-                      setStartHour(h);
-                    }}
-                  />
+                  <div className="bk-pick">
+                    <DatePicker
+                      value={date}
+                      onChange={(d) => {
+                        setSlotNotice('');
+                        setStartHour(null);
+                        setDate(d);
+                      }}
+                      today={today}
+                      settings={settings}
+                    />
+                    <div className="bk-times">
+                      <h3 className="bk-day" aria-live="polite">{dateLabel(date, { long: true })}</h3>
+                      <TimePicker
+                        options={options}
+                        lefts={lefts}
+                        loading={availLoading && !avail}
+                        window={avail?.window}
+                        value={startHour}
+                        paidHours={paidHours}
+                        onChange={(h) => {
+                          setSlotNotice('');
+                          setStartHour(h);
+                        }}
+                      />
+                    </div>
+                  </div>
                   {avail && room && avail.window.open && (
                     <div className="lane-preview">
                       <DayView
@@ -394,6 +419,11 @@ function BookingFlow({ siteData }) {
                   <dd className="tnum">{selected ? rangeLabel(selected.hour, endHour) : 'Pick a start time'}</dd>
                 </div>
               </dl>
+              {step > 0 && step < 3 && (
+                <button type="button" className="btn btn-ghost btn-sm summary-change" onClick={() => goTo(0)}>
+                  Change room, day or time
+                </button>
+              )}
               <div className="summary-price">
                 <div className="price-line">
                   <span className="tnum">
@@ -465,7 +495,7 @@ function DatePicker({ value, onChange, today, settings }) {
   }, [value]);
 
   return (
-    <div className="book-cal">
+    <div className="bk-cal">
       <MonthCalendar
         month={month}
         onMonthChange={setMonth}
@@ -482,12 +512,12 @@ function DatePicker({ value, onChange, today, settings }) {
   );
 }
 
-function TimePicker({ options, loading, window: win, value, onChange, paidHours }) {
+function TimePicker({ options, lefts, loading, window: win, value, onChange, paidHours }) {
   if (loading) {
     return (
-      <div className="time-grid">
-        {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="skeleton" style={{ height: 56 }} />
+      <div className="bk-slots">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="skeleton bk-slot-skel" />
         ))}
       </div>
     );
@@ -504,25 +534,25 @@ function TimePicker({ options, loading, window: win, value, onChange, paidHours 
     );
   }
   return (
-    <div className="time-grid" role="radiogroup" aria-label="Start time">
+    <div className="bk-slots" role="radiogroup" aria-label="Start time">
       {options
-        .filter((o) => !o.past)
-        .map((o) => (
-          <button
-            key={o.hour}
-            type="button"
-            role="radio"
-            aria-checked={value === o.hour}
-            disabled={!o.ok}
-            className={clsx('time-chip', o.freeHours > 0 && 'has-free')}
-            onClick={() => onChange(o.hour)}
-          >
-            <span className="time-chip-start tnum">{hourLabel(o.hour)}</span>
-            <span className="time-chip-end tnum">
-              {o.ok ? `until ${hourLabel(o.hour + paidHours + o.freeHours)}` : o.reason === 'closing' ? 'Past closing' : 'Taken'}
-            </span>
-          </button>
-        ))}
+        .filter((o) => o.ok)
+        .map((o) => {
+          const left = lefts[o.hour] || 1;
+          return (
+            <button
+              key={o.hour}
+              type="button"
+              role="radio"
+              aria-checked={value === o.hour}
+              className="bk-slot"
+              onClick={() => onChange(o.hour)}
+            >
+              <span className="tnum">{rangeLabel(o.hour, o.hour + paidHours + o.freeHours)}</span>
+              <span className={clsx('bk-left', left === 1 && 'is-last')}>{left} left</span>
+            </button>
+          );
+        })}
     </div>
   );
 }
