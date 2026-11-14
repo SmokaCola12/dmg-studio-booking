@@ -1,5 +1,5 @@
 // Studio content shown on the public website.
-// Rooms, rates, opening hours, the promo and GCash details are edited in the admin (/admin),
+// Rooms, rates, opening hours, the promo, GCash details, contact details and gallery photos are edited in the admin (/admin),
 // so the studio owner can change them without touching code. Everything else lives here.
 
 export const site = {
@@ -9,11 +9,11 @@ export const site = {
   intro:
     'Backlined rooms with a drum kit, amps and PA already up. Bring guitars, sticks and cables, and play. Pick an open hour on the board below and book it from your phone.',
 
-  // Where people find you
-  address: ['Unit 2, 123 Sample Street', 'Barangay Sample, Quezon City'],
-  landmark: 'Beside the sample landmark, a short walk from the main road',
+  // Where people find you. The owner can override the contact details below in /admin/content; these are the defaults.
+  address: ['10-U-A Baltazar St', 'Grace Park West, Caloocan, 1405 Metro Manila'],
+  landmark: 'Near 5th Avenue LRT Station',
   // Used for the embedded map and the "Get directions" link. A plain address or place name works.
-  mapsQuery: 'Quezon City Memorial Circle',
+  mapsQuery: '10-U-A Baltazar St, Grace Park West, Caloocan, 1405 Metro Manila',
 
   // How people reach you
   phone: '0917 000 0000',
@@ -49,9 +49,6 @@ export const site = {
     },
   ],
 
-  // Photos for the gallery. Put files in /public/gallery and list them here, e.g.
-  // { src: '/gallery/room-a.jpg', alt: 'Room A with the drum kit set up' }
-  // While this is empty, the gallery shows labeled placeholders.
-  gallery: [],
+  // Gallery photos are uploaded in /admin/content. These labels show on the placeholders until the first photo is added.
   galleryPlaceholders: ['Room A, full band setup', 'Drum kit and cymbals', 'Amp wall', 'Room B for duos', 'Mixer and PA', 'Waiting area'],
 };

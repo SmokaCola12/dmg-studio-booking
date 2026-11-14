@@ -112,6 +112,7 @@ test('partly booked day is few, then open with room to spare', async () => {
   assert.equal(dayOf((await getMonth(targetMonth)).body, target).status, 'few');
 
   db.prepare('DELETE FROM bookings').run();
+  saveSettings({ buffer_minutes: 0 }); // no cleaning gap, so 12-22 is fully free
   addBooking(a, target, 10, 12); // 10 start hours left
   const day = dayOf((await getMonth(targetMonth)).body, target);
   assert.equal(day.status, 'open');

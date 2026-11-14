@@ -7,13 +7,14 @@ import { api } from '../lib/api.js';
 import { BookingTicket } from '../components/BookingTicket.jsx';
 import { ConfirmDialog, Field } from '../components/ui.jsx';
 import { downloadIcs } from '../lib/ics.js';
-import { dateLabel, rangeLabel } from '../lib/format.js';
-import { useSite } from '../lib/site-data.jsx';
+import { bookingEnd, bookingStart, dateLabel, rangeLabel } from '../lib/format.js';
+import { useSite, useStudioInfo } from '../lib/site-data.jsx';
 import { HowToBook, claimTour } from '../components/HowToBook.jsx';
 
 export default function CheckBooking() {
   const [params] = useSearchParams();
   const { data: siteData } = useSite();
+  const info = useStudioInfo();
   const [code, setCode] = useState(params.get('code') || '');
   const [phone, setPhone] = useState('');
   const [booking, setBooking] = useState(null);
@@ -151,7 +152,7 @@ export default function CheckBooking() {
           <BookingTicket booking={booking} />
           <div className="done-actions">
             {['pending', 'confirmed'].includes(booking.status) && (
-              <button type="button" className="btn btn-dark" onClick={() => downloadIcs(booking)}>
+              <button type="button" className="btn btn-dark" onClick={() => downloadIcs(booking, info.address)}>
                 <CalendarPlus /> Add to calendar
               </button>
             )}
@@ -177,7 +178,7 @@ export default function CheckBooking() {
           <HowToBook variant="resched" open={moveTourOpen} onOpenChange={onMoveTourChange} />
           {siteData && reschedOpen && (
             <RescheduleDialog
-              key={`${booking.date}-${booking.startHour}`}
+              key={`${booking.date}-${booking.startHour}-${booking.startMinute || 0}`}
               open={reschedOpen}
               onOpenChange={setReschedOpen}
               booking={booking}
@@ -191,7 +192,7 @@ export default function CheckBooking() {
             open={confirmOpen}
             onOpenChange={setConfirmOpen}
             title="Cancel this booking?"
-            description={`${booking.room?.name}, ${dateLabel(booking.date)}, ${rangeLabel(booking.startHour, booking.endHour)}. The slot opens up for other bands right away.`}
+            description={`${booking.room?.name}, ${dateLabel(booking.date)}, ${rangeLabel(bookingStart(booking), bookingEnd(booking))}. The slot opens up for other bands right away.`}
             confirmLabel={cancelling ? 'Cancelling…' : 'Cancel booking'}
             onConfirm={cancel}
             busy={cancelling}

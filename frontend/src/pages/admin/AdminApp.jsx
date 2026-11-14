@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarDays, DoorOpen, ExternalLink, LayoutList, LogOut, Settings as SettingsIcon, Sun } from 'lucide-react';
+import { CalendarDays, DoorOpen, ExternalLink, LayoutList, LogOut, Settings as SettingsIcon, Sun, Images } from 'lucide-react';
 import { adminApi, adminToken } from '../../lib/api.js';
 import { site } from '../../config/site.js';
 import { AdminContext } from './admin-shared.jsx';
@@ -11,6 +11,7 @@ import Bookings from './Bookings.jsx';
 import Schedule from './Schedule.jsx';
 import Rooms from './Rooms.jsx';
 import Settings from './Settings.jsx';
+import Content from './Content.jsx';
 import '../../styles/admin.css';
 
 const NAV = [
@@ -19,6 +20,7 @@ const NAV = [
   { to: '/admin/schedule', label: 'Schedule', icon: CalendarDays },
   { to: '/admin/rooms', label: 'Rooms', icon: DoorOpen },
   { to: '/admin/settings', label: 'Settings', icon: SettingsIcon },
+  { to: '/admin/content', label: 'Studio page', icon: Images, desktopOnly: true }, // reached from Settings on phones
 ];
 
 export default function AdminApp() {
@@ -137,12 +139,13 @@ function AdminShell({ onLogout }) {
             <Route path="schedule" element={<Schedule />} />
             <Route path="rooms" element={<Rooms />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="content" element={<Content />} />
             <Route path="*" element={<Overview />} />
           </Routes>
         </main>
 
         <nav className="a-tabbar" aria-label="Admin">
-          {NAV.map(({ to, label, icon: Icon, end, badge }) => (
+          {NAV.filter((n) => !n.desktopOnly).map(({ to, label, icon: Icon, end, badge }) => (
             <NavLink key={to} to={to} end={end} className="a-tab">
               <span className="a-tab-icon">
                 <Icon aria-hidden="true" />

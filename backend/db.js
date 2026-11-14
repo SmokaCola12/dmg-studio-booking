@@ -31,6 +31,7 @@ db.exec(`
     room_id         INTEGER NOT NULL REFERENCES rooms(id),
     date            TEXT NOT NULL,            -- YYYY-MM-DD, studio local time
     start_hour      INTEGER NOT NULL,         -- 0-23
+    start_minute    INTEGER NOT NULL DEFAULT 0, -- 0 or 30 (the booking ends at end_hour:start_minute)
     paid_hours      INTEGER NOT NULL,
     free_hours      INTEGER NOT NULL DEFAULT 0,
     end_hour        INTEGER NOT NULL,         -- start_hour + paid_hours + free_hours
@@ -68,7 +69,22 @@ db.exec(`
     key    TEXT PRIMARY KEY,
     value  TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS gallery_photos (
+    id          INTEGER PRIMARY KEY,
+    file        TEXT NOT NULL UNIQUE,
+    alt         TEXT NOT NULL DEFAULT '',
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT DEFAULT (datetime('now'))
+  );
 `);
+
+// ---------- Additive migrations for databases created before a column existed ----------
+
+const bookingColumns = db.prepare('PRAGMA table_info(bookings)').all().map((c) => c.name);
+if (!bookingColumns.includes('start_minute')) {
+  db.exec('ALTER TABLE bookings ADD COLUMN start_minute INTEGER NOT NULL DEFAULT 0');
+}
 
 // ---------- Settings ----------
 
@@ -79,6 +95,7 @@ export const DEFAULT_SETTINGS = {
   max_hours: 6,
   lead_time_hours: 1,        // earliest a slot can start, counted from now
   max_days_ahead: 60,
+  buffer_minutes: 30,        // cleaning gap kept after every booking (0, 30, 60, 90 or 120)
   cancel_cutoff_hours: 24,   // customers can cancel online until this many hours before
   auto_confirm: false,       // false = new online bookings wait for admin approval
   promo_enabled: true,
@@ -111,6 +128,54 @@ export function saveSettings(partial) {
   });
   tx(Object.entries(partial).filter(([k]) => k in DEFAULT_SETTINGS));
   return getSettings();
+}
+
+// ---------- Owner-editable contact details ----------
+// Stored in the settings table but kept out of DEFAULT_SETTINGS: a missing row means
+// "use the default from the frontend", so nothing is seeded.
+
+export const CONTENT_KEYS = {
+  address: 'contact_address',
+  landmark: 'contact_landmark',
+  mapsQuery: 'contact_maps_query',
+  phone: 'contact_phone',
+  email: 'contact_email',
+  messenger: 'contact_messenger',
+  socials: 'contact_socials',
+};
+
+export function getContent() {
+  const rows = db.prepare("SELECT key, value FROM settings WHERE key LIKE 'contact\\_%' ESCAPE '\\'").all();
+  const byKey = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const out = {};
+  for (const [field, key] of Object.entries(CONTENT_KEYS)) {
+    out[field] = key in byKey ? JSON.parse(byKey[key]) : null;
+  }
+  return out;
+}
+
+// `partial` maps field name to a validated value; null removes the row (back to the default).
+export function saveContent(partial) {
+  const upsert = db.prepare(
+    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+  );
+  const remove = db.prepare('DELETE FROM settings WHERE key = ?');
+  const tx = db.transaction((entries) => {
+    for (const [field, v] of entries) {
+      if (v === null) remove.run(CONTENT_KEYS[field]);
+      else upsert.run(CONTENT_KEYS[field], JSON.stringify(v));
+    }
+  });
+  tx(Object.entries(partial).filter(([f]) => f in CONTENT_KEYS));
+  return getContent();
+}
+
+export function galleryPhoto(row) {
+  return { id: row.id, src: `/media/gallery/${row.file}`, alt: row.alt, sortOrder: row.sort_order };
+}
+
+export function listGallery() {
+  return db.prepare('SELECT * FROM gallery_photos ORDER BY sort_order, id').all().map(galleryPhoto);
 }
 
 // ---------- Seed rooms on first run ----------

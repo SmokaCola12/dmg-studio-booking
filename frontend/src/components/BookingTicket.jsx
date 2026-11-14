@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 import { Copy } from 'lucide-react';
 import { StatusBadge } from './ui.jsx';
-import { dateLabel, formatPhone, hoursText, PAYMENT_LABELS, peso, rangeLabel } from '../lib/format.js';
+import { bookingEnd, bookingStart, dateLabel, formatPhone, hoursText, PAYMENT_LABELS, peso, rangeLabel } from '../lib/format.js';
 
 export function BookingTicket({ booking }) {
   const copy = async () => {
@@ -43,7 +43,7 @@ export function BookingTicket({ booking }) {
           <div>
             <dt>Time</dt>
             <dd className="tnum">
-              {rangeLabel(booking.startHour, booking.endHour)}
+              {rangeLabel(bookingStart(booking), bookingEnd(booking))}
               {booking.freeHours > 0 && ` (${hoursText(booking.freeHours)} free)`}
             </dd>
           </div>

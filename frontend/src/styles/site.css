@@ -1047,6 +1047,7 @@
 @media (min-width: 720px) {
   .bk-options {
     grid-template-columns: 1fr auto;
+    align-items: end;
   }
 }
 .bk-opt .label {
@@ -1134,6 +1135,23 @@
 .bk-slot-skel {
   height: 44px;
 }
+/* Phone: two chips a row, range on top and "N left" under it, so 3:30–4:30 PM never wraps mid-time. */
+@media (max-width: 480px) {
+  .bk-slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bk-slot {
+    flex-direction: column;
+    gap: 3px;
+    min-height: 56px;
+    padding: 8px 6px;
+    font-size: var(--t-sm);
+    text-align: center;
+  }
+  .bk-slot > .tnum {
+    white-space: nowrap;
+  }
+}
 .bk-left {
   padding: 2px 8px;
   border-radius: 999px;
@@ -1156,6 +1174,27 @@
 }
 .bk-note {
   margin-top: 10px;
+}
+/* "30 min is kept after each session for cleaning." A quiet legend line, keyed with the same
+   ticked swatch as the Cleaning clip on the timeline. */
+.bk-buffer-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: var(--t-xs);
+  color: var(--note-ink, var(--plum-300));
+}
+.bk-buffer-note::before {
+  content: '';
+  flex: none;
+  width: 22px;
+  height: 12px;
+  border-radius: 0 3px 3px 0;
+  border-left-width: 0;
+}
+.resched-body .bk-buffer-note {
+  --note-ink: var(--ink-3);
 }
 .bk-link {
   min-height: 44px;

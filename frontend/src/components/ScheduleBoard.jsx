@@ -7,7 +7,8 @@ import { hourLabel, peso, rangeLabel } from '../lib/format.js';
  * The day schedule drawn like a DAW arrangement: each room is a track,
  * each booking is a clip, the red line is "now". Open hours are tappable.
  *
- * items: { [roomId]: [{ start, end, kind: 'booking'|'block'|'selection'|'free-bonus', label, sub, status, id, data }] }
+ * items: { [roomId]: [{ start, end, kind: 'booking'|'block'|'selection'|'free-bonus'|'buffer', label, sub, status, id, data }] }
+ * start/end are decimal hours (15.5 = 3:30 PM). 'buffer' is the cleaning time after a booking.
  */
 export function ScheduleBoard({
   rooms,
@@ -52,6 +53,8 @@ export function ScheduleBoard({
   }, [scrollKey, openHour, hours]);
 
   const cols = Array.from({ length: hours }, (_, i) => openHour + i);
+  // Start times can fall on :00 or :30, so the tappable cells are half hours.
+  const cells = Array.from({ length: hours * 2 }, (_, i) => openHour + i / 2);
   const pct = (h) => ((h - openHour) / hours) * 100;
   const showNow = nowHour !== null && nowHour >= openHour && nowHour <= closeHour;
   const pastEnd = earliest !== null ? Math.min(Math.max(earliest, openHour), closeHour) : openHour;
@@ -81,7 +84,7 @@ export function ScheduleBoard({
             const roomItems = items[room.id] || [];
             const blocked = (h) =>
               h < pastEnd ||
-              roomItems.some((it) => it.kind !== 'free-bonus' && it.kind !== 'selection' && h < it.end && h + 1 > it.start);
+              roomItems.some((it) => it.kind !== 'free-bonus' && it.kind !== 'selection' && h < it.end && h + 0.5 > it.start);
             return (
               <div className="board-row" key={room.id} style={{ '--room': room.color }}>
                 <div className="board-track">
@@ -96,22 +99,23 @@ export function ScheduleBoard({
                     <div className="lane-past" style={{ left: 0, width: `${pct(pastEnd)}%` }} aria-hidden="true" />
                   )}
 
-                  <div className="lane-cells">
-                    {cols.map((h) =>
-                      onSelectFree && !blocked(h) ? (
+                  <div className="lane-cells" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
+                    {cells.map((h) => {
+                      const half = h % 1 !== 0;
+                      return onSelectFree && !blocked(h) ? (
                         <button
                           key={h}
                           type="button"
-                          className="lane-cell"
+                          className={clsx('lane-cell', half && 'lane-cell--half')}
                           onClick={() => onSelectFree(room, h)}
                           aria-label={`${freeLabel} ${room.name} at ${hourLabel(h)}`}
                         >
                           <span className="lane-cell-hint">+ {hourLabel(h)}</span>
                         </button>
                       ) : (
-                        <span key={h} className="lane-cell lane-cell--off" aria-hidden="true" />
-                      )
-                    )}
+                        <span key={h} className={clsx('lane-cell lane-cell--off', half && 'lane-cell--half')} aria-hidden="true" />
+                      );
+                    })}
                   </div>
 
                   {roomItems.map((it) => {
@@ -148,7 +152,7 @@ export function ScheduleBoard({
             <div
               className="board-playhead"
               style={{ '--p': (nowHour - openHour) / hours }}
-              aria-label={`Current time, about ${hourLabel(Math.floor(nowHour))}`}
+              aria-label={`Current time, about ${hourLabel(Math.floor(nowHour * 2) / 2)}`}
               role="img"
             />
           )}

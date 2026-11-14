@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
+import { site } from '../config/site.js';
 
 const SiteContext = createContext(null);
 
@@ -21,3 +22,28 @@ export function SiteProvider({ children }) {
 }
 
 export const useSite = () => useContext(SiteContext);
+
+const CONTACT_KEYS = ['address', 'landmark', 'mapsQuery', 'phone', 'email', 'messenger', 'socials'];
+
+/** Merges owner-edited contact details over the defaults in config/site.js, field by field. */
+export function mergeContact(contact) {
+  const out = { ...site };
+  for (const k of CONTACT_KEYS) {
+    const v = contact?.[k];
+    if (v !== null && v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
+/** The static site config with the owner's saved contact details applied. Never blocks render. */
+export function useStudioInfo() {
+  const ctx = useContext(SiteContext);
+  const contact = ctx?.data?.content?.contact;
+  return useMemo(() => mergeContact(contact), [contact]);
+}
+
+/** Gallery photos uploaded in the admin, or an empty list. */
+export function useGallery() {
+  const ctx = useContext(SiteContext);
+  return ctx?.data?.content?.gallery || [];
+}

@@ -5,8 +5,8 @@ import { Info } from 'lucide-react';
 import { Dialog } from './ui.jsx';
 import { api } from '../lib/api.js';
 import { useAvailability } from '../lib/useAvailability.js';
-import { startOptions } from '../lib/schedule.js';
-import { addDays, dateLabel, hourLabel, hoursText, rangeLabel } from '../lib/format.js';
+import { bufferText, startOptions } from '../lib/schedule.js';
+import { addDays, bookingEnd, bookingStart, dateLabel, hourLabel, hoursText, rangeLabel, splitStart } from '../lib/format.js';
 
 /** Move a booking to another date or start time. Room and paid hours stay the same. */
 export function RescheduleDialog({ open, onOpenChange, booking, phone, settings, today, onMoved }) {
@@ -23,17 +23,18 @@ export function RescheduleDialog({ open, onOpenChange, booking, phone, settings,
     if (!avail || avail.date !== date) return [];
     let busy = avail.rooms.find((r) => r.id === booking.room.id)?.busy || [];
     if (date === booking.date) {
-      // Your current slot is not in your way when you shift by an hour.
+      // Your current slot, and the cleaning time after it, is not in your way when you shift by a little.
       const own = busy.findIndex(
-        (b) => b.kind === 'booking' && b.start === booking.startHour && b.end === booking.endHour
+        (b) => b.kind === 'booking' && b.start === bookingStart(booking) && b.end === bookingEnd(booking)
       );
       if (own >= 0) busy = busy.filter((_, i) => i !== own);
     }
     return startOptions({ busy, settings, window: avail.window, paidHours: booking.paidHours });
   }, [avail, date, booking, settings]);
 
-  const visible = options.filter((o) => !o.past);
-  const isCurrent = (h) => date === booking.date && h === booking.startHour;
+  const isCurrent = (h) => date === booking.date && h === bookingStart(booking);
+  // Only times that fit (plus your current one), so the :30 starts don't double the grid with greyed-out chips.
+  const visible = options.filter((o) => !o.past && (o.ok || isCurrent(o.hour)));
   const picked = options.find((o) => o.hour === startHour && o.ok);
 
   const save = async () => {
@@ -41,7 +42,8 @@ export function RescheduleDialog({ open, onOpenChange, booking, phone, settings,
     setSaving(true);
     setError('');
     try {
-      const r = await api.rescheduleBooking(booking.code, phone, date, picked.hour);
+      const { startHour: h, startMinute: m } = splitStart(picked.hour);
+      const r = await api.rescheduleBooking(booking.code, phone, date, h, m);
       toast.success('Booking moved');
       onMoved(r.booking);
       onOpenChange(false);
@@ -57,7 +59,7 @@ export function RescheduleDialog({ open, onOpenChange, booking, phone, settings,
       open={open}
       onOpenChange={onOpenChange}
       title="Pick a new time"
-      description={`${booking.room?.name}, ${hoursText(booking.paidHours)}. Now: ${dateLabel(booking.date)}, ${rangeLabel(booking.startHour, booking.endHour)}`}
+      description={`${booking.room?.name}, ${hoursText(booking.paidHours)}. Now: ${dateLabel(booking.date)}, ${rangeLabel(bookingStart(booking), bookingEnd(booking))}`}
       footer={
         <>
           <button type="button" className="btn btn-outline" onClick={() => onOpenChange(false)}>
@@ -115,12 +117,15 @@ export function RescheduleDialog({ open, onOpenChange, booking, phone, settings,
                         ? `until ${hourLabel(o.hour + booking.paidHours + o.freeHours)}`
                         : o.reason === 'closing'
                           ? 'Past closing'
-                          : 'Taken'}
+                          : o.reason === 'cleaning'
+                            ? 'Cleaning time'
+                            : 'Taken'}
                   </span>
                 </button>
               ))}
             </div>
           )}
+          {bufferText(settings) && <p className="bk-note bk-buffer-note">{bufferText(settings)}</p>}
         </div>
 
         {error && (

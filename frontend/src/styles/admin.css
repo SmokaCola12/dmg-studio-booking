@@ -841,6 +841,58 @@
   cursor: pointer;
 }
 
+/* Bookings closer together than the cleaning time. Reads like a console label: marigold edge,
+   one line per clash, the gap in a mono tag. Warn tokens keep it readable in both schemes. */
+.buffer-conflicts {
+  margin-bottom: 14px;
+  padding: 10px 14px 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--marigold-strong);
+  border-radius: var(--radius-m);
+  background: var(--warn-bg);
+  color: var(--ink);
+  font-size: var(--t-sm);
+}
+
+.buffer-conflicts-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.buffer-conflicts-title svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+.buffer-conflicts-list {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.buffer-conflicts-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+
+.buffer-conflicts-gap {
+  padding: 1px 7px;
+  border: 1px dashed var(--warn);
+  border-radius: var(--radius-s);
+  color: var(--warn);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+}
+
 /* Settings */
 .settings {
   max-width: 820px;
@@ -1050,5 +1102,100 @@
   }
   .save-bar {
     bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Studio page: contact details and gallery */
+.ct-socials {
+  display: grid;
+  gap: 8px;
+}
+
+.ct-social {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.ct-add {
+  align-self: start;
+  margin-top: 4px;
+}
+
+.ct-icon-btn {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.ct-gal-hint {
+  margin: -8px 0 16px;
+}
+
+.ct-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ct-photo {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+}
+
+.ct-photo-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--line);
+}
+
+.ct-photo-body {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.ct-photo-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ct-remove {
+  margin-left: auto;
+  color: var(--bad);
+}
+
+@media (max-width: 640px) {
+  .ct-social {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ct-social .input:first-child {
+    grid-column: 1 / -1;
+  }
+  .ct-social .ct-icon-btn {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .ct-gallery {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .ct-photo-actions .ct-remove {
+    flex: 1;
+    padding: 0 0.5em;
+  }
+}
+
+@media (max-width: 400px) {
+  .ct-gallery {
+    grid-template-columns: 1fr;
   }
 }

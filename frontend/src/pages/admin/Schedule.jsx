@@ -8,7 +8,7 @@ import { LoadError, PageHead, useAdmin, useLoader } from './admin-shared.jsx';
 import { BookingRow } from './BookingRow.jsx';
 import { BookingDialog } from './BookingDialog.jsx';
 import { BlockDialog, NewBookingDialog } from './EntryDialogs.jsx';
-import { boardItems, boardRooms } from './Overview.jsx';
+import { BufferConflicts, boardItems, boardRooms } from './Overview.jsx';
 
 export default function Schedule() {
   const { version, changed } = useAdmin();
@@ -89,11 +89,13 @@ export default function Schedule() {
         {shown && today && shown !== today && <span className="day-nav-rel">{relativeDay(shown, today)}</span>}
       </div>
 
+      <BufferConflicts day={d} />
       {d && s ? (
         <DayView
           rooms={boardRooms(d)}
           openHour={s.open_hour}
           closeHour={s.close_hour}
+          settings={s}
           items={items}
           nowHour={d.date === d.now.date ? d.now.hour + d.now.minute / 60 : null}
           onSelectClip={(it) => openBooking(it.data)}

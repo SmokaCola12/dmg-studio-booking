@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { Clock, MapPin } from 'lucide-react';
 import { site } from '../config/site.js';
+import { useStudioInfo } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
 import { useMonthAvailability } from '../lib/useMonthAvailability.js';
-import { startOptions } from '../lib/schedule.js';
+import { bufferText, startOptions } from '../lib/schedule.js';
 import { addDays, dateLabel, hoursSentence, hoursText, peso, rangeLabel } from '../lib/format.js';
 import { MonthCalendar } from './MonthCalendar.jsx';
 
@@ -15,6 +16,7 @@ import { MonthCalendar } from './MonthCalendar.jsx';
  */
 export function BookingCard({ rooms, settings, today }) {
   const navigate = useNavigate();
+  const info = useStudioInfo();
   const [roomId, setRoomId] = useState(rooms[0]?.id);
   const [hours, setHours] = useState(
     Math.min(Math.max(settings.promo_enabled ? settings.promo_buy_hours : settings.min_hours, settings.min_hours), settings.max_hours),
@@ -82,8 +84,8 @@ export function BookingCard({ rooms, settings, today }) {
           <dt className="sr-only">Location</dt>
           <dd>
             <MapPin aria-hidden="true" />{' '}
-            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.mapsQuery)}`} target="_blank" rel="noreferrer">
-              {site.address[site.address.length - 1]}
+            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(info.mapsQuery)}`} target="_blank" rel="noreferrer">
+              {info.address[info.address.length - 1]}
             </a>
           </dd>
         </div>
@@ -91,7 +93,7 @@ export function BookingCard({ rooms, settings, today }) {
 
       <div className="bk-options">
         <div className="bk-opt">
-          <span className="label" id="bk-room-label">Room</span>
+          <span className={rooms.length > 1 ? 'label' : 'sr-only'} id="bk-room-label">Room</span>
           <div className="bk-chips" role="radiogroup" aria-labelledby="bk-room-label">
             {rooms.map((r) => (
               <button
@@ -182,6 +184,7 @@ export function BookingCard({ rooms, settings, today }) {
               ))}
             </div>
           )}
+          {bufferText(settings) && <p className="bk-note bk-buffer-note">{bufferText(settings)}</p>}
           <p id="bk-hint" className={clsx('bk-hint', chosen && 'is-ready')} aria-live="polite">
             {chosen
               ? `${room.name}, ${dateLabel(shownDate)}, ${rangeLabel(chosen.hour, chosen.hour + hours)} · ${peso(total)}`

@@ -20,7 +20,8 @@ const people = [
   ['Renz Aquino', 'Heavy Rotation PH', '09451230987'],
 ];
 
-// [dayOffset, roomIndex, startHour, paidHours, status]
+// [dayOffset, roomIndex, startHour, paidHours, status, startMinute (optional, 0 or 30)]
+// Future samples go through planBooking, so any that would break the cleaning buffer are skipped.
 const plan = [
   [0, 0, 13, 2, 'confirmed'],
   [0, 1, 15, 2, 'pending'],
@@ -29,6 +30,7 @@ const plan = [
   [1, 0, 10, 2, 'pending'],
   [1, 0, 16, 2, 'confirmed'],
   [1, 1, 14, 1, 'confirmed'],
+  [1, 1, 17, 1, 'pending', 30],
   [2, 0, 19, 2, 'pending'],
   [2, 1, 11, 3, 'confirmed'],
   [-1, 0, 14, 2, 'completed'],
@@ -37,22 +39,22 @@ const plan = [
 ];
 
 const insert = db.prepare(
-  `INSERT INTO bookings (code, room_id, date, start_hour, paid_hours, free_hours, end_hour, customer_name, band_name,
+  `INSERT INTO bookings (code, room_id, date, start_hour, start_minute, paid_hours, free_hours, end_hour, customer_name, band_name,
     phone, email, headcount, notes, payment_method, payment_ref, hourly_rate, total, status, source)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, '', ?, ?, ?, ?, ?, 'online')`
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, '', ?, ?, ?, ?, ?, 'online')`
 );
 
 let added = 0;
-plan.forEach(([offset, roomIdx, start, hours, status], i) => {
+plan.forEach(([offset, roomIdx, start, hours, status, minute = 0], i) => {
   const room = rooms[roomIdx % rooms.length];
   if (!room) return;
   const date = addDays(today, offset);
-  if (db.prepare('SELECT 1 FROM bookings WHERE room_id = ? AND date = ? AND start_hour = ?').get(room.id, date, start)) return;
+  if (db.prepare('SELECT 1 FROM bookings WHERE room_id = ? AND date = ? AND start_hour = ? AND start_minute = ?').get(room.id, date, start, minute)) return;
   const [name, band, phone] = people[i % people.length];
   let free = 0;
   let end = start + hours;
   if (offset >= 0) {
-    const p = planBooking({ roomId: room.id, date, startHour: start, paidHours: hours, ignoreLeadTime: true });
+    const p = planBooking({ roomId: room.id, date, startHour: start, startMinute: minute, paidHours: hours, ignoreLeadTime: true });
     if (!p.ok) return;
     free = p.freeHours;
     end = p.endHour;
@@ -62,7 +64,7 @@ plan.forEach(([offset, roomIdx, start, hours, status], i) => {
   }
   const gcash = i % 3 === 0;
   insert.run(
-    bookingCode(), room.id, date, start, hours, free, end, name, band, phone, 3 + (i % 3),
+    bookingCode(), room.id, date, start, minute, hours, free, end, name, band, phone, 3 + (i % 3),
     gcash ? 'gcash' : 'pay_at_studio', gcash ? `10${String(48213 + i * 777).padStart(11, '0')}` : '',
     room.hourly_rate, room.hourly_rate * hours, status
   );

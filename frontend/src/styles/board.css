@@ -291,6 +291,61 @@ button.clip:active {
   box-shadow: inset 0 0 0 1px var(--board-border);
 }
 
+/* Cleaning time after a booking: the tape tail behind a clip. No fill, a dashed edge and fine
+   vertical ticks (Booked = solid, Closed = diagonal hatch). Not tappable, not an alert colour.
+   The same stripes are reused by the legend key and the "kept for cleaning" note. */
+.clip--buffer,
+.key--buffer,
+.bk-buffer-note::before {
+  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, currentColor 38%, transparent) 0 1px, transparent 1px 5px);
+  border: 1px dashed color-mix(in srgb, currentColor 55%, transparent);
+}
+
+.clip--buffer {
+  margin-left: 0;
+  border-left-width: 0;
+  border-radius: 0 6px 6px 0;
+  color: var(--track-meta);
+  pointer-events: none;
+}
+
+.clip--buffer .clip-head {
+  padding: 3px 5px 0;
+  font-size: 11px;
+  font-stretch: 85%;
+  letter-spacing: 0.02em;
+}
+
+.clip--buffer .clip-label {
+  font-weight: 600;
+}
+
+/* A 30 minute tail is too narrow for a horizontal word: set it upright on its side instead. */
+@container (max-width: 64px) {
+  .clip--buffer .clip-head {
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    font-size: 10px;
+    writing-mode: vertical-rl;
+  }
+}
+
+/* Half-hour cells: only the hour lines are drawn, :30 is a tap target with a short tick. */
+.lane-cell--half {
+  border-left-color: transparent;
+}
+
+.lane-cell--half::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -1px;
+  height: 7px;
+  border-left: 1px solid var(--grid-line);
+}
+
 .clip--selection {
   background: var(--plum-950);
   color: var(--marigold);
@@ -370,8 +425,9 @@ button.clip:active {
 @media (max-width: 760px) {
   .board {
     --track-w: 84px;
-    --min-hour: 46px;
-    --lane-h: 58px;
+    /* 80px an hour makes each :30 tap cell 40px wide; the board scrolls sideways to make room. */
+    --min-hour: 80px;
+    --lane-h: 62px;
   }
   .board-track {
     padding: 0 6px 0 12px;
@@ -722,6 +778,10 @@ button.clip:active {
 .key--block {
   background: repeating-linear-gradient(135deg, var(--line-strong) 0 4px, transparent 4px 8px);
   box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.key--buffer {
+  color: var(--ink-3);
 }
 
 .key--open {

@@ -3,7 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { CalendarPlus, MessageCircle } from 'lucide-react';
 import { BookingTicket } from '../components/BookingTicket.jsx';
 import { downloadIcs } from '../lib/ics.js';
-import { site } from '../config/site.js';
+import { useStudioInfo } from '../lib/site-data.jsx';
 import { api } from '../lib/api.js';
 
 function fromSession(code) {
@@ -16,6 +16,7 @@ function fromSession(code) {
 }
 
 export default function BookingDone() {
+  const info = useStudioInfo();
   const { code } = useParams();
   const { state } = useLocation();
   const initial = state?.booking?.code === code ? state : fromSession(code);
@@ -57,10 +58,10 @@ export default function BookingDone() {
       <BookingTicket booking={booking} />
 
       <div className="done-actions">
-        <button type="button" className="btn btn-dark" onClick={() => downloadIcs(booking)}>
+        <button type="button" className="btn btn-dark" onClick={() => downloadIcs(booking, info.address)}>
           <CalendarPlus /> Add to calendar
         </button>
-        <a className="btn btn-outline" href={site.messenger} target="_blank" rel="noreferrer">
+        <a className="btn btn-outline" href={info.messenger} target="_blank" rel="noreferrer">
           <MessageCircle /> Message the studio
         </a>
         <Link className="btn btn-ghost" to="/">

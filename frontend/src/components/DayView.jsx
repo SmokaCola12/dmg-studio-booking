@@ -3,6 +3,7 @@ import clsx from 'clsx';
 import { Info } from 'lucide-react';
 import { ScheduleBoard } from './ScheduleBoard.jsx';
 import { STATUS_LABELS, hourLabel, rangeLabel } from '../lib/format.js';
+import { startOptions } from '../lib/schedule.js';
 
 function readStored(key, fallback) {
   try {
@@ -13,15 +14,16 @@ function readStored(key, fallback) {
   }
 }
 
-const LISTED = ['booking', 'block', 'selection', 'free-bonus'];
+// 'buffer' is the cleaning time after a booking: shown in the list, and not open for booking.
+const LISTED = ['booking', 'block', 'selection', 'free-bonus', 'buffer'];
 
-/** Open stretches of the day for one room: hours not taken by a booking or block and not already past. */
-function openStretches(roomItems, openHour, closeHour, earliest) {
+/** Open stretches of the day for one room: half hours not taken by a booking, block or cleaning time and not already past. */
+function openStretches(roomItems, openHour, closeHour, earliest, settings) {
   const taken = roomItems.filter((it) => LISTED.includes(it.kind));
   const stretches = [];
   let from = null;
-  for (let h = Math.max(openHour, earliest); h < closeHour; h++) {
-    const busy = taken.some((it) => h < it.end && h + 1 > it.start);
+  for (let h = Math.max(openHour, earliest); h < closeHour; h += 0.5) {
+    const busy = taken.some((it) => h < it.end && h + 0.5 > it.start);
     if (!busy && from === null) from = h;
     if (busy && from !== null) {
       stretches.push([from, h]);
@@ -29,10 +31,26 @@ function openStretches(roomItems, openHour, closeHour, earliest) {
     }
   }
   if (from !== null) stretches.push([from, closeHour]);
-  return stretches;
+  if (!settings) return stretches;
+
+  // Same rule as the Book page: only list a stretch if a session of the minimum length fits in it
+  // including the cleaning time before the next booking. The row starts at the first start that fits.
+  const busy = taken.filter((it) => it.kind === 'block' || (it.kind === 'booking' && it.status !== 'cancelled'));
+  const starts = startOptions({
+    busy,
+    settings: { ...settings, open_hour: openHour, close_hour: closeHour, promo_enabled: false },
+    window: { open: true, earliest },
+    paidHours: settings.min_hours || 1,
+  }).filter((o) => o.ok);
+  return stretches
+    .map(([a, b]) => {
+      const first = starts.find((o) => o.hour >= a && o.hour < b);
+      return first ? [first.hour, b] : null;
+    })
+    .filter(Boolean);
 }
 
-function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, pickOnly, onSelectClip, onSelectFree }) {
+function SimpleDay({ settings, rooms, openHour, closeHour, items, earliest, isPublic, pickOnly, onSelectClip, onSelectFree }) {
   return (
     <div className="simple-day">
       {rooms.map((room) => {
@@ -41,7 +59,7 @@ function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, pick
           ...roomItems
             .filter((it) => LISTED.includes(it.kind))
             .map((it) => ({ type: it.kind, start: it.start, end: it.end, it })),
-          ...(pickOnly ? [] : openStretches(roomItems, openHour, closeHour, earliest)).map(([start, end]) => ({ type: 'open', start, end })),
+          ...(pickOnly ? [] : openStretches(roomItems, openHour, closeHour, earliest, settings)).map(([start, end]) => ({ type: 'open', start, end })),
         ].sort((a, b) => a.start - b.start);
 
         return (
@@ -76,6 +94,7 @@ function SimpleDay({ rooms, openHour, closeHour, items, earliest, isPublic, pick
                     {row.type === 'block' && (
                       <span className="simple-what simple-what--muted">{isPublic ? 'Closed' : `Blocked: ${row.it.label}`}</span>
                     )}
+                    {row.type === 'buffer' && <span className="simple-what simple-what--muted">Cleaning</span>}
                     {row.type === 'open' && (
                       <>
                         <span className="simple-what simple-what--muted">{isPublic ? 'Still open' : 'Open'}</span>
@@ -117,6 +136,7 @@ export function Legend({ isPublic }) {
     ['open', 'Open'],
     ['booking', 'Booked'],
     ...(isPublic ? [] : [['pending', 'Waiting']]),
+    ['buffer', 'Cleaning'],
     ['block', 'Closed'],
     ['now', 'Now'],
   ];
@@ -172,6 +192,7 @@ export function DayView({
   rooms,
   openHour,
   closeHour,
+  settings,
   items,
   nowHour,
   earliest = null,
@@ -199,7 +220,7 @@ export function DayView({
       /* private mode: the choice just isn't remembered */
     }
   };
-  const listEarliest = earliest ?? (nowHour === null ? openHour : Math.ceil(nowHour));
+  const listEarliest = earliest ?? (nowHour === null ? openHour : Math.ceil(nowHour * 2) / 2);
 
   return (
     <div className={clsx('day-view', theme === 'dark' && 'day-view--dark')}>
@@ -229,6 +250,7 @@ export function DayView({
 
       {view === 'list' ? (
         <SimpleDay
+          settings={settings}
           rooms={rooms}
           openHour={openHour}
           closeHour={closeHour}
