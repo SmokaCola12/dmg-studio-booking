@@ -1,21 +1,39 @@
 const pesoFmt = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
 export const peso = (n) => pesoFmt.format(n || 0);
 
-/** 10 → "10 AM", 12 → "12 NN", 0/24 → "12 MN" (the way schedules are written in the Philippines). */
+/**
+ * 10 → "10 AM", 12 → "12 NN", 0/24 → "12 MN" (the way schedules are written in the Philippines).
+ * Half hours keep the minutes: 15.5 → "3:30 PM", 12.5 → "12:30 PM".
+ */
 export function hourLabel(h, { short = false } = {}) {
-  const hour = ((h % 24) + 24) % 24;
-  if (hour === 12) return short ? '12' : '12 NN';
-  if (hour === 0) return short ? '12' : '12 MN';
-  const n = hour % 12;
-  return short ? String(n) : `${n} ${hour < 12 ? 'AM' : 'PM'}`;
+  const day = ((h % 24) + 24) % 24;
+  const hour = Math.floor(day);
+  const minutes = Math.round((day - hour) * 60);
+  const n = hour % 12 || 12;
+  const mm = String(minutes).padStart(2, '0');
+  if (minutes === 0) {
+    if (hour === 12) return short ? '12' : '12 NN';
+    if (hour === 0) return short ? '12' : '12 MN';
+    return short ? String(n) : `${n} ${hour < 12 ? 'AM' : 'PM'}`;
+  }
+  return short ? `${n}:${mm}` : `${n}:${mm} ${hour < 12 ? 'AM' : 'PM'}`;
 }
 
 const meridiem = (h) => {
-  const hour = ((h % 24) + 24) % 24;
-  if (hour === 12) return 'NN';
-  if (hour === 0) return 'MN';
-  return hour < 12 ? 'AM' : 'PM';
+  const day = ((h % 24) + 24) % 24;
+  if (day === 12) return 'NN';
+  if (day === 0) return 'MN';
+  return day < 12 ? 'AM' : 'PM';
 };
+
+/** A booking's start as a decimal hour: startHour 15, startMinute 30 → 15.5. Old data has no startMinute. */
+export const bookingStart = (b) => (b.startHour ?? 0) + (b.startMinute || 0) / 60;
+
+/** A booking's end as a decimal hour. endHour is a whole number and shares the start's minutes. */
+export const bookingEnd = (b) => (b.endHour ?? 0) + (b.startMinute || 0) / 60;
+
+/** Splits a decimal start hour (15.5) into what the API takes: { startHour: 15, startMinute: 30 }. */
+export const splitStart = (h) => ({ startHour: Math.floor(h), startMinute: Math.round((h - Math.floor(h)) * 60) });
 
 /** 15, 18 → "3–6 PM"; 11, 14 → "11 AM – 2 PM" */
 export function rangeLabel(start, end) {
@@ -25,6 +43,14 @@ export function rangeLabel(start, end) {
 }
 
 export const hoursText = (n) => `${n} ${n === 1 ? 'hour' : 'hours'}`;
+
+/** 30 → "30 min", 60 → "1 hour", 90 → "1 hr 30 min" */
+export function minutesText(m) {
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  return rest ? `${h} hr ${rest} min` : hoursText(h);
+}
 
 const toDate = (s) => new Date(`${s}T00:00:00Z`);
 

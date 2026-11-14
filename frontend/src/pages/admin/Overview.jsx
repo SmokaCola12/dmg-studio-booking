@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { AlertTriangle, Plus } from 'lucide-react';
 import { adminApi } from '../../lib/api.js';
-import { dateLabel, peso, rangeLabel } from '../../lib/format.js';
+import { bookingEnd, bookingStart, dateLabel, minutesText, peso, rangeLabel } from '../../lib/format.js';
+import { bufferMinutes, withBufferClips } from '../../lib/schedule.js';
 import { DayView } from '../../components/DayView.jsx';
 import { MonthCalendar } from '../../components/MonthCalendar.jsx';
 import { LoadError, PageHead, useAdmin, useLoader } from './admin-shared.jsx';
@@ -19,10 +20,10 @@ export function boardItems(day) {
     items[b.roomId].push({
       kind: 'booking',
       id: b.id,
-      start: b.startHour,
-      end: b.endHour,
+      start: bookingStart(b),
+      end: bookingEnd(b),
       label: b.bandName || b.name,
-      sub: rangeLabel(b.startHour, b.endHour),
+      sub: rangeLabel(bookingStart(b), bookingEnd(b)),
       status: b.status,
       data: b,
     });
@@ -33,7 +34,40 @@ export function boardItems(day) {
       items[id]?.push({ kind: 'block', id: `bl${bl.id}`, start: bl.startHour, end: bl.endHour, label: bl.reason || 'Blocked' });
     }
   }
+  // A muted "Cleaning" clip after each booking that is still on.
+  const buffer = bufferMinutes(day.settings);
+  for (const id of Object.keys(items)) items[id] = withBufferClips(items[id], buffer);
   return items;
+}
+
+/** Warns about bookings that sit closer together than the cleaning time (made before the buffer existed, or overridden by staff). */
+export function BufferConflicts({ day }) {
+  const list = day?.bufferConflicts || [];
+  if (!list.length) return null;
+  const roomName = (id) => day.rooms.find((r) => r.id === id)?.name || 'a room';
+  const byId = Object.fromEntries(day.bookings.map((b) => [b.id, b]));
+  return (
+    <div className="buffer-conflicts" role="status">
+      <p className="buffer-conflicts-title">
+        <AlertTriangle aria-hidden="true" />
+        Not enough cleaning time
+      </p>
+      <ul className="buffer-conflicts-list">
+        {list.map((c) => {
+          const [a, b] = c.bookingIds.map((id) => byId[id]);
+          return (
+            <li key={`${c.roomId}-${c.bookingIds.join('-')}`}>
+              <b>{roomName(c.roomId)}</b>
+              <span className="tnum">
+                {a ? rangeLabel(bookingStart(a), bookingEnd(a)) : ''} then {b ? rangeLabel(bookingStart(b), bookingEnd(b)) : ''}
+              </span>
+              <span className="buffer-conflicts-gap">{c.gapMinutes > 0 ? `${minutesText(c.gapMinutes)} gap` : 'no gap'}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
 
 export const boardRooms = (day) =>
@@ -200,6 +234,7 @@ export default function Overview() {
             Open schedule
           </Link>
         </div>
+        <BufferConflicts day={day.data} />
         {day.data && s ? (
           <DayView
             timelineOnly

@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { adminApi } from '../../lib/api.js';
-import { Dialog, Field } from '../../components/ui.jsx';
-import { hourLabel, hoursText, peso } from '../../lib/format.js';
+import { ConfirmDialog, Dialog, Field } from '../../components/ui.jsx';
+import { bookingEnd, bookingStart, hourLabel, hoursText, peso, splitStart } from '../../lib/format.js';
+import { bufferMinutes, conflictReason } from '../../lib/schedule.js';
 import { useAdmin } from './admin-shared.jsx';
-
-const overlaps = (list, s, e) => list.some((x) => s < x.end && e > x.start);
 
 /** Busy times for a date from the admin schedule endpoint. */
 function useDayBusy(date, open) {
@@ -25,13 +24,21 @@ function useDayBusy(date, open) {
   return day;
 }
 
+// Busy times in decimal hours. Bookings carry their cleaning time (bufferEnd); blocks have none.
 const busyFor = (day, roomId) =>
   day
     ? [
         ...day.bookings
           .filter((b) => b.roomId === roomId && (b.status === 'pending' || b.status === 'confirmed'))
-          .map((b) => ({ start: b.startHour, end: b.endHour })),
-        ...day.blocks.filter((b) => b.roomId === null || b.roomId === roomId).map((b) => ({ start: b.startHour, end: b.endHour })),
+          .map((b) => ({
+            kind: 'booking',
+            start: bookingStart(b),
+            end: bookingEnd(b),
+            bufferEnd: bookingEnd(b) + bufferMinutes(day.settings) / 60,
+          })),
+        ...day.blocks
+          .filter((b) => b.roomId === null || b.roomId === roomId)
+          .map((b) => ({ kind: 'block', start: b.startHour, end: b.endHour })),
       ]
     : [];
 
@@ -41,13 +48,16 @@ export function NewBookingDialog({ open, onOpenChange, defaults, onCreated }) {
   const [form, setForm] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Set when the server says the time only clashes with another booking's cleaning time (409, code 'buffer').
+  const [bufferAsk, setBufferAsk] = useState(null);
 
   useEffect(() => {
     if (open && defaults) {
+      setBufferAsk(null);
       setForm({
         roomId: defaults.roomId,
         date: defaults.date,
-        startHour: defaults.startHour ?? '',
+        start: defaults.startHour ?? '', // decimal hour, 15.5 = 3:30 PM
         paidHours: defaults.paidHours ?? 2,
         name: '',
         bandName: '',
@@ -73,33 +83,48 @@ export function NewBookingDialog({ open, onOpenChange, defaults, onCreated }) {
   const set = (k, num = false) => (e) => setForm((f) => ({ ...f, [k]: num ? Number(e.target.value) : e.target.value }));
 
   const hours = [];
-  if (settings) for (let h = settings.open_hour; h < settings.close_hour; h++) hours.push(h);
+  if (settings) for (let h = settings.open_hour; h < settings.close_hour; h += 0.5) hours.push(h);
   const lengths = [];
   if (settings) for (let n = settings.min_hours; n <= settings.max_hours; n++) lengths.push(n);
+  const buffer = bufferMinutes(settings);
 
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) {
-      setError('Enter a name for this booking.');
-      return;
-    }
-    if (form.startHour === '') {
-      setError('Pick a start time.');
-      return;
-    }
+  const save = async (overrideBuffer = false) => {
     setBusy(true);
     setError('');
     try {
-      const r = await adminApi.createBooking({ ...form, startHour: Number(form.startHour) });
+      const { start, ...rest } = form;
+      const r = await adminApi.createBooking({
+        ...rest,
+        ...splitStart(Number(start)),
+        ...(overrideBuffer ? { overrideBuffer: true } : {}),
+      });
       toast.success(`Booked ${r.booking.roomName} for ${r.booking.bandName || r.booking.name}`);
       changed();
       onCreated?.(r.booking);
       onOpenChange(false);
     } catch (err) {
-      setError(err.message);
+      if (err.status === 409 && err.code === 'buffer') {
+        // Staff can book into the cleaning time on purpose, after a warning.
+        setBufferAsk(err.message);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setBusy(false);
     }
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) {
+      setError('Enter a name for this booking.');
+      return;
+    }
+    if (form.start === '') {
+      setError('Pick a start time.');
+      return;
+    }
+    save(false);
   };
 
   return (
@@ -128,14 +153,14 @@ export function NewBookingDialog({ open, onOpenChange, defaults, onCreated }) {
           </Field>
           <Field label="Start">
             {(p) => (
-              <select {...p} className="select" value={form.startHour} onChange={set('startHour')}>
+              <select {...p} className="select" value={form.start} onChange={set('start')}>
                 <option value="">Pick a time</option>
                 {hours.map((h) => {
-                  const taken = overlaps(busyList, h, h + Number(form.paidHours));
+                  const clash = conflictReason(busyList, h, h + Number(form.paidHours), buffer);
                   return (
-                    <option key={h} value={h} disabled={taken}>
+                    <option key={h} value={h} disabled={clash === 'taken'}>
                       {hourLabel(h)}
-                      {taken ? ' (taken)' : ''}
+                      {clash === 'taken' ? ' (taken)' : clash === 'cleaning' ? ' (cleaning time, you can override)' : ''}
                     </option>
                   );
                 })}
@@ -195,6 +220,19 @@ export function NewBookingDialog({ open, onOpenChange, defaults, onCreated }) {
           </button>
         </div>
       </form>
+      <ConfirmDialog
+        open={Boolean(bufferAsk)}
+        onOpenChange={(o) => !o && setBufferAsk(null)}
+        title="Not enough cleaning time"
+        description={`${bufferAsk || ''} Book it anyway?`}
+        confirmLabel="Book anyway"
+        cancelLabel="Go back"
+        busy={busy}
+        onConfirm={() => {
+          setBufferAsk(null);
+          save(true);
+        }}
+      />
     </Dialog>
   );
 }

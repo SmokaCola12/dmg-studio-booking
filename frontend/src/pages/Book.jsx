@@ -7,8 +7,8 @@ import { AlertCircle, Check, Copy, Gift, Info } from 'lucide-react';
 import { useSite } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
 import { api } from '../lib/api.js';
-import { startOptions, promoFreeHours } from '../lib/schedule.js';
-import { addDays, dateLabel, hourLabel, hoursText, peso, rangeLabel } from '../lib/format.js';
+import { bufferMinutes, bufferText, startOptions, promoFreeHours, withBufferClips } from '../lib/schedule.js';
+import { addDays, dateLabel, hourLabel, hoursText, peso, rangeLabel, splitStart } from '../lib/format.js';
 import { MonthCalendar } from '../components/MonthCalendar.jsx';
 import { useMonthAvailability } from '../lib/useMonthAvailability.js';
 import { DayView } from '../components/DayView.jsx';
@@ -33,7 +33,7 @@ export default function Book() {
   if (status === 'error') {
     return (
       <div className="page wrap">
-        <h1 className="page-title">Book a room</h1>
+        <h1 className="page-title">Book</h1>
         <div className="notice notice-bad" style={{ marginTop: 20 }}>
           <AlertCircle /> The booking page didn’t load. Check your connection, then refresh.
         </div>
@@ -64,7 +64,9 @@ function BookingFlow({ siteData }) {
 
   // Coming from the home card with a time already picked: go straight to the details.
   // If that time turns out not to fit, the check below sends them back to the picker.
-  const fromCard = paramStart !== null && Number.isInteger(Number(paramStart)) && Boolean(paramDate) && paramDate >= today && rooms.some((r) => String(r.id) === params.get('room'));
+  // start can be a half hour like 15.5 (3:30 PM)
+  const validStart = paramStart !== null && paramStart !== '' && Number.isFinite(Number(paramStart)) && (Number(paramStart) * 2) % 1 === 0;
+  const fromCard = validStart && Boolean(paramDate) && paramDate >= today && rooms.some((r) => String(r.id) === params.get('room'));
   const [step, setStep] = useState(fromCard ? 1 : 0);
 
   // First visit: show a short animated walkthrough. "How to book" reopens it.
@@ -81,7 +83,8 @@ function BookingFlow({ siteData }) {
     if (Number.isInteger(fromUrl) && String(fromUrl) === paramHours) return clamp(fromUrl, settings.min_hours, settings.max_hours);
     return clamp(settings.promo_enabled ? settings.promo_buy_hours : settings.min_hours, settings.min_hours, settings.max_hours);
   });
-  const [startHour, setStartHour] = useState(paramStart !== null ? Number(paramStart) : null);
+  // Decimal hour on the studio clock: 15.5 means 3:30 PM.
+  const [startHour, setStartHour] = useState(validStart ? Number(paramStart) : null);
   const [details, setDetails] = useState(() => ({
     name: '',
     bandName: '',
@@ -180,7 +183,7 @@ function BookingFlow({ siteData }) {
       const { booking, freeNote } = await api.createBooking({
         roomId,
         date,
-        startHour: selected.hour,
+        ...splitStart(selected.hour),
         paidHours,
         ...details,
         paymentMethod: payment.method,
@@ -220,7 +223,7 @@ function BookingFlow({ siteData }) {
       <div className="wrap">
         <HowToBook variant="book" open={tourOpen} onOpenChange={onTourChange} hideKey="book" />
         <div className="book-title-row">
-          <h1 className="page-title">Book a room</h1>
+          <h1 className="page-title">Book</h1>
           <button type="button" className="day-view-help" onClick={() => setTourOpen(true)}>
             How to book
           </button>
@@ -329,6 +332,7 @@ function BookingFlow({ siteData }) {
                           setStartHour(h);
                         }}
                       />
+                      {bufferText(settings) && <p className="bk-note bk-buffer-note">{bufferText(settings)}</p>}
                     </div>
                   </div>
                   {avail && room && avail.window.open && (
@@ -344,7 +348,10 @@ function BookingFlow({ siteData }) {
                         earliest={avail.window.earliest}
                         items={{
                           [room.id]: [
-                            ...busy.map((b) => ({ ...b, label: b.kind === 'block' ? 'Closed' : 'Booked' })),
+                            ...withBufferClips(
+                              busy.map((b, i) => ({ ...b, id: b.id ?? `${b.kind}-${i}`, label: b.kind === 'block' ? 'Closed' : 'Booked' })),
+                              bufferMinutes(settings)
+                            ),
                             ...(selected
                               ? [
                                   { kind: 'selection', start: selected.hour, end: selected.hour + paidHours, label: `Your pick · ${hoursText(paidHours)}`, id: 'sel' },

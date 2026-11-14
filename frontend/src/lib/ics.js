@@ -1,12 +1,19 @@
 import { site } from '../config/site.js';
+import { bookingEnd, bookingStart } from './format.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 
 /** Downloads a calendar file for a booking. Times are written in Philippine time (UTC+8). */
-export function downloadIcs(booking) {
+export function downloadIcs(booking, address = site.address) {
   const ymd = booking.date.replace(/-/g, '');
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
-  const dt = (h) => (h >= 24 ? `${ymd}T235900` : `${ymd}T${pad(h)}0000`);
+  // h is a decimal hour (15.5 = 3:30 PM). The cleaning buffer after a booking is not part of the event.
+  const dt = (h) => {
+    if (h >= 24) return `${ymd}T235900`;
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    return `${ymd}T${pad(hh)}${pad(mm)}00`;
+  };
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -23,10 +30,10 @@ export function downloadIcs(booking) {
     'BEGIN:VEVENT',
     `UID:${booking.code}@studio-booking`,
     `DTSTAMP:${stamp}`,
-    `DTSTART;TZID=Asia/Manila:${dt(booking.startHour)}`,
-    `DTEND;TZID=Asia/Manila:${dt(booking.endHour)}`,
+    `DTSTART;TZID=Asia/Manila:${dt(bookingStart(booking))}`,
+    `DTEND;TZID=Asia/Manila:${dt(bookingEnd(booking))}`,
     `SUMMARY:Rehearsal at ${site.shortName} (${booking.room.name})`,
-    `LOCATION:${site.address.join(', ').replace(/,/g, '\\,')}`,
+    `LOCATION:${address.join(', ').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')}`,
     `DESCRIPTION:Booking code ${booking.code}`,
     'END:VEVENT',
     'END:VCALENDAR',

@@ -46,7 +46,7 @@ export function daysBetween(a, b) {
   return Math.round((new Date(`${b}T00:00:00Z`) - new Date(`${a}T00:00:00Z`)) / 86400000);
 }
 
-/** Hours from "now" until a given date + hour (can be negative). */
+/** Hours from "now" until a given date + hour (can be negative). `hour` may be fractional, e.g. 15.5 for 3:30 PM. */
 export function hoursUntil(dateStr, hour) {
   const now = studioNow();
   return daysBetween(now.date, dateStr) * 24 + hour - (now.hour + now.minute / 60);

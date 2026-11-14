@@ -30,3 +30,10 @@ export function toInt(v) {
   const n = Number(v);
   return Number.isInteger(n) ? n : NaN;
 }
+
+/** Start minute of a booking: undefined when not sent, otherwise 0 or 30 (NaN for anything else). */
+export function toStartMinute(v) {
+  if (v === undefined || v === null || v === '') return undefined;
+  const n = toInt(v);
+  return n === 0 || n === 30 ? n : NaN;
+}

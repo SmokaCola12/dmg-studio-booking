@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import clsx from 'clsx';
 import { adminApi } from '../../lib/api.js';
-import { hourLabel, hoursText } from '../../lib/format.js';
+import { hourLabel, hoursText, minutesText } from '../../lib/format.js';
 import { promoText } from '../../lib/schedule.js';
 import { Field, Switch } from '../../components/ui.jsx';
 import { HOURS_0_24, LoadError, PageHead, useLoader } from './admin-shared.jsx';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const BUFFER_CHOICES = [0, 30, 60, 90, 120];
 
 export default function Settings() {
   const loaded = useLoader(() => adminApi.settings(), []);
@@ -62,7 +64,11 @@ export default function Settings() {
 
   return (
     <form className="a-page settings" onSubmit={save} noValidate>
-      <PageHead title="Settings" sub="These rules apply to online bookings. Staff can still add bookings outside them." />
+      <PageHead title="Settings" sub="These rules apply to online bookings. Staff can still add bookings outside them.">
+        <Link to="/admin/content" className="btn btn-sm btn-outline">
+          Contact details and photos
+        </Link>
+      </PageHead>
 
       <section className="set-section" aria-labelledby="set-hours">
         <h2 id="set-hours" className="a-h2">
@@ -135,6 +141,17 @@ export default function Settings() {
           <Field label="Online cancellation closes" hint="Hours before the start time.">
             {(p) => (
               <input {...p} className="input tnum" type="number" inputMode="numeric" min={0} value={form.cancel_cutoff_hours} onChange={num('cancel_cutoff_hours')} />
+            )}
+          </Field>
+          <Field label="Cleaning time after each booking" hint="The room stays free after every booking so staff can clean and set up. Customers can't book into it; staff can.">
+            {(p) => (
+              <select {...p} className="select" value={form.buffer_minutes ?? 0} onChange={num('buffer_minutes')}>
+                {BUFFER_CHOICES.map((m) => (
+                  <option key={m} value={m}>
+                    {m === 0 ? 'None' : minutesText(m)}
+                  </option>
+                ))}
+              </select>
             )}
           </Field>
           <div className="field">

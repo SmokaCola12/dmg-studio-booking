@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { MessageSquare, Phone, Mail } from 'lucide-react';
 import { adminApi } from '../../lib/api.js';
 import { ConfirmDialog, Dialog, Field, StatusBadge } from '../../components/ui.jsx';
-import { dateLabel, formatPhone, hourLabel, hoursText, PAYMENT_LABELS, peso, rangeLabel } from '../../lib/format.js';
+import { bookingEnd, bookingStart, dateLabel, formatPhone, hourLabel, hoursText, PAYMENT_LABELS, peso, rangeLabel, splitStart } from '../../lib/format.js';
 import { useAdmin } from './admin-shared.jsx';
 
 /** Details and actions for one booking. `booking` stays mounted while closing so the exit animation has content. */
@@ -15,6 +15,8 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null); // 'cancel' | 'no_show'
   const [moving, setMoving] = useState(false);
+  // Set when the server says the change only clashes with another booking's cleaning time (409, code 'buffer').
+  const [bufferAsk, setBufferAsk] = useState(null); // { body, message, text }
 
   useEffect(() => {
     if (booking) {
@@ -22,6 +24,7 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
       setNotes(booking.adminNotes || '');
       setPaymentRef(booking.paymentRef || '');
       setMoving(false);
+      setBufferAsk(null);
     }
   }, [booking]);
 
@@ -41,7 +44,12 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
       onSaved?.(r.booking);
       return true;
     } catch (err) {
-      toast.error(err.message);
+      if (err.status === 409 && err.code === 'buffer') {
+        // Staff may book into the cleaning time on purpose, after a warning.
+        setBufferAsk({ body, message, text: err.message });
+      } else {
+        toast.error(err.message);
+      }
       return false;
     } finally {
       setBusy(false);
@@ -100,7 +108,7 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
               {b.roomName}, {dateLabel(b.date, { long: true })}
             </p>
             <p className="bd-when-sub tnum">
-              {rangeLabel(b.startHour, b.endHour)} ({hoursText(b.paidHours)}
+              {rangeLabel(bookingStart(b), bookingEnd(b))} ({hoursText(b.paidHours)}
               {b.freeHours ? ` + ${hoursText(b.freeHours)} free` : ''})
             </p>
             {active && !moving && (
@@ -214,7 +222,7 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
         open={confirm === 'cancel'}
         onOpenChange={(o) => !o && setConfirm(null)}
         title={b.status === 'pending' ? 'Decline this booking?' : 'Cancel this booking?'}
-        description={`${who}, ${b.roomName}, ${dateLabel(b.date)} ${rangeLabel(b.startHour, b.endHour)}. The time opens up for other bands. Let them know by text or Messenger.`}
+        description={`${who}, ${b.roomName}, ${dateLabel(b.date)} ${rangeLabel(bookingStart(b), bookingEnd(b))}. The time opens up for other bands. Let them know by text or Messenger.`}
         confirmLabel={b.status === 'pending' ? 'Decline booking' : 'Cancel booking'}
         cancelLabel="Keep it"
         danger
@@ -225,11 +233,25 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
         open={confirm === 'no_show'}
         onOpenChange={(o) => !o && setConfirm(null)}
         title="Mark as no-show?"
-        description={`${who} didn’t come to their ${hourLabel(b.startHour)} slot. You can reopen it later if this was a mistake.`}
+        description={`${who} didn’t come to their ${hourLabel(bookingStart(b))} slot. You can reopen it later if this was a mistake.`}
         confirmLabel="Mark as no-show"
         cancelLabel="Go back"
         busy={busy}
         onConfirm={() => patch({ status: 'no_show' }, 'Marked as no-show')}
+      />
+      <ConfirmDialog
+        open={Boolean(bufferAsk)}
+        onOpenChange={(o) => !o && setBufferAsk(null)}
+        title="Not enough cleaning time"
+        description={`${bufferAsk?.text || 'This time is inside another booking’s cleaning time.'} Save it anyway?`}
+        confirmLabel="Save anyway"
+        cancelLabel="Go back"
+        busy={busy}
+        onConfirm={async () => {
+          const ask = bufferAsk;
+          setBufferAsk(null);
+          if (await patch({ ...ask.body, overrideBuffer: true }, ask.message)) setMoving(false);
+        }}
       />
     </>
   );
@@ -241,7 +263,7 @@ function MoveForm({ booking, busy, onCancel, onSave }) {
   const [form, setForm] = useState({
     roomId: booking.roomId,
     date: booking.date,
-    startHour: booking.startHour,
+    start: bookingStart(booking), // decimal hour, 15.5 = 3:30 PM
     paidHours: booking.paidHours,
   });
 
@@ -256,7 +278,7 @@ function MoveForm({ booking, busy, onCancel, onSave }) {
 
   if (!rooms || !settings) return <div className="skeleton" style={{ height: 120 }} />;
   const hours = [];
-  for (let h = settings.open_hour; h < settings.close_hour; h++) hours.push(h);
+  for (let h = settings.open_hour; h < settings.close_hour; h += 0.5) hours.push(h);
   const lengths = [];
   for (let n = settings.min_hours; n <= settings.max_hours; n++) lengths.push(n);
   const set = (k, num = true) => (e) => setForm((f) => ({ ...f, [k]: num ? Number(e.target.value) : e.target.value }));
@@ -281,7 +303,7 @@ function MoveForm({ booking, busy, onCancel, onSave }) {
         </Field>
         <Field label="Start">
           {(p) => (
-            <select {...p} className="select" value={form.startHour} onChange={set('startHour')}>
+            <select {...p} className="select" value={form.start} onChange={set('start')}>
               {hours.map((h) => (
                 <option key={h} value={h}>
                   {hourLabel(h)}
@@ -309,7 +331,7 @@ function MoveForm({ booking, busy, onCancel, onSave }) {
         <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
           Never mind
         </button>
-        <button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => onSave(form)}>
+        <button type="button" className="btn btn-dark btn-sm" disabled={busy} onClick={() => onSave({ roomId: form.roomId, date: form.date, ...splitStart(form.start), paidHours: form.paidHours })}>
           Move booking
         </button>
       </div>

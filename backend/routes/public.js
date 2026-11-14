@@ -1,14 +1,14 @@
 import { Router } from 'express';
-import { db, getSettings, parseRoom } from '../db.js';
+import { db, getSettings, parseRoom, getContent, listGallery } from '../db.js';
 import { studioNow, isValidDate, STUDIO_TZ } from '../lib/time.js';
-import { dateWindow, planBooking, roomBusy, canCustomerCancel, monthAvailability, isValidMonth } from '../lib/scheduling.js';
-import { normalizePhone, cleanText, isEmail, bookingCode, toInt } from '../lib/validate.js';
+import { dateWindow, planBooking, planErrorBody, roomBusyHours, canCustomerCancel, monthAvailability, isValidMonth } from '../lib/scheduling.js';
+import { normalizePhone, cleanText, isEmail, bookingCode, toInt, toStartMinute } from '../lib/validate.js';
 
 const router = Router();
 
 const PUBLIC_SETTING_KEYS = [
   'open_hour', 'close_hour', 'min_hours', 'max_hours', 'lead_time_hours', 'max_days_ahead',
-  'cancel_cutoff_hours', 'auto_confirm', 'promo_enabled', 'promo_buy_hours', 'promo_free_hours',
+  'buffer_minutes', 'cancel_cutoff_hours', 'auto_confirm', 'promo_enabled', 'promo_buy_hours', 'promo_free_hours',
   'gcash_enabled', 'gcash_name', 'gcash_number', 'closed_weekdays',
 ];
 
@@ -19,6 +19,7 @@ export function publicBooking(b) {
     room,
     date: b.date,
     startHour: b.start_hour,
+    startMinute: b.start_minute || 0,
     endHour: b.end_hour,
     paidHours: b.paid_hours,
     freeHours: b.free_hours,
@@ -48,7 +49,8 @@ router.get('/site', (req, res) => {
       id, name, description, hourlyRate: hourly_rate, capacity, gear, color,
     }));
   const settings = Object.fromEntries(PUBLIC_SETTING_KEYS.map((k) => [k, s[k]]));
-  res.json({ rooms, settings, now: studioNow(), timeZone: STUDIO_TZ });
+  const gallery = listGallery().map(({ id, src, alt }) => ({ id, src, alt }));
+  res.json({ rooms, settings, content: { contact: getContent(), gallery }, now: studioNow(), timeZone: STUDIO_TZ });
 });
 
 router.get('/availability', (req, res) => {
@@ -59,7 +61,8 @@ router.get('/availability', (req, res) => {
     date,
     now: studioNow(),
     window: dateWindow(date),
-    rooms: rooms.map((r) => ({ id: r.id, busy: roomBusy(r.id, date) })),
+    // busy is in decimal hours (15.5 = 3:30 PM); bookings also carry bufferEnd, the end of their cleaning time.
+    rooms: rooms.map((r) => ({ id: r.id, busy: roomBusyHours(r.id, date) })),
   });
 });
 
@@ -79,8 +82,10 @@ router.post('/bookings', (req, res) => {
   const headcount = toInt(b.headcount ?? 1);
   const paymentMethod = b.paymentMethod === 'gcash' && s.gcash_enabled ? 'gcash' : 'pay_at_studio';
   const paymentRef = cleanText(b.paymentRef, 40);
+  const startMinute = toStartMinute(b.startMinute);
 
   const errors = {};
+  if (Number.isNaN(startMinute)) errors.startMinute = 'Start times are on the hour or half hour.';
   if (!name) errors.name = 'Enter the name of the person booking.';
   if (!phone) errors.phone = 'Enter a mobile number like 0917 123 4567.';
   if (email && !isEmail(email)) errors.email = 'Check the email address.';
@@ -93,6 +98,7 @@ router.post('/bookings', (req, res) => {
       roomId: toInt(b.roomId),
       date: b.date,
       startHour: toInt(b.startHour),
+      startMinute: startMinute ?? 0,
       paidHours: toInt(b.paidHours),
     });
     if (!plan.ok) return plan;
@@ -106,13 +112,13 @@ router.post('/bookings', (req, res) => {
 
     const info = db
       .prepare(
-        `INSERT INTO bookings (code, room_id, date, start_hour, paid_hours, free_hours, end_hour,
+        `INSERT INTO bookings (code, room_id, date, start_hour, start_minute, paid_hours, free_hours, end_hour,
           customer_name, band_name, phone, email, headcount, notes, payment_method, payment_ref,
           hourly_rate, total, status, source)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online')`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'online')`
       )
       .run(
-        code, plan.room.id, b.date, plan.startHour, plan.paidHours, plan.freeHours, plan.endHour,
+        code, plan.room.id, b.date, plan.startHour, plan.startMinute, plan.paidHours, plan.freeHours, plan.endHour,
         name, cleanText(b.bandName, 80), phone, email, headcount, cleanText(b.notes, 500),
         paymentMethod, paymentRef, plan.hourlyRate, plan.total, s.auto_confirm ? 'confirmed' : 'pending'
       );
@@ -120,7 +126,7 @@ router.post('/bookings', (req, res) => {
   });
 
   const result = create();
-  if (!result.ok) return res.status(409).json({ error: result.error });
+  if (!result.ok) return res.status(409).json(planErrorBody(result));
   const row = db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.id);
   res.status(201).json({ booking: publicBooking(row), freeNote: result.freeNote });
 });
@@ -164,7 +170,9 @@ router.post('/bookings/reschedule', (req, res) => {
   if (!isValidDate(req.body?.date)) return res.status(400).json({ error: 'Pick a new date.' });
   const date = req.body.date;
   const startHour = toInt(req.body.startHour);
-  if (date === row.date && startHour === row.start_hour) {
+  const startMinute = toStartMinute(req.body.startMinute);
+  if (Number.isNaN(startMinute)) return res.status(400).json({ error: 'Start times are on the hour or half hour.' });
+  if (date === row.date && startHour === row.start_hour && (startMinute ?? 0) === (row.start_minute || 0)) {
     return res.status(400).json({ error: 'That is the time you already have. Pick a different one.' });
   }
 
@@ -175,18 +183,19 @@ router.post('/bookings/reschedule', (req, res) => {
       roomId: fresh.room_id,
       date,
       startHour,
+      startMinute: startMinute ?? 0,
       paidHours: fresh.paid_hours,
       excludeBookingId: fresh.id,
     });
     if (!plan.ok) return plan;
     db.prepare(
-      `UPDATE bookings SET date = ?, start_hour = ?, free_hours = ?, end_hour = ?, updated_at = datetime('now') WHERE id = ?`
-    ).run(date, plan.startHour, plan.freeHours, plan.endHour, fresh.id);
+      `UPDATE bookings SET date = ?, start_hour = ?, start_minute = ?, free_hours = ?, end_hour = ?, updated_at = datetime('now') WHERE id = ?`
+    ).run(date, plan.startHour, plan.startMinute, plan.freeHours, plan.endHour, fresh.id);
     return { ok: true, freeNote: plan.freeNote };
   });
 
   const result = move();
-  if (!result.ok) return res.status(409).json({ error: result.error });
+  if (!result.ok) return res.status(409).json(planErrorBody(result));
   res.json({
     booking: publicBooking(db.prepare('SELECT * FROM bookings WHERE id = ?').get(row.id)),
     freeNote: result.freeNote,

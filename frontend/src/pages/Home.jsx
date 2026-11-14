@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CalendarClock, CalendarDays, MessageCircle, Navigation, Phone } from 'lucide-react';
 import { site } from '../config/site.js';
-import { useSite } from '../lib/site-data.jsx';
+import { useSite, useStudioInfo, useGallery } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
 import { Calendar } from '../components/Calendar.jsx';
 import { DayView } from '../components/DayView.jsx';
 import { BookingCard } from '../components/BookingCard.jsx';
 import { HowToBook } from '../components/HowToBook.jsx';
 import { addDays, dateLabel, hourLabel, hoursSentence, peso, relativeDay, rangeLabel } from '../lib/format.js';
-import { promoText } from '../lib/schedule.js';
+import { bufferMinutes, promoText, withBufferClips } from '../lib/schedule.js';
 
 /** "Room A is open until 6 PM" style summary of the current hour, for today only. */
 function nowSummary(rooms, avail, settings) {
@@ -21,6 +21,9 @@ function nowSummary(rooms, avail, settings) {
     const busy = avail.rooms.find((r) => r.id === room.id)?.busy || [];
     const current = busy.find((b) => now >= b.start && now < b.end);
     if (current) return `${room.name} is in use until ${hourLabel(current.end)}`;
+    // Right after a booking the room is being cleaned and can't be started yet.
+    const cleaning = busy.find((b) => b.kind !== 'block' && b.bufferEnd && now >= b.end && now < b.bufferEnd);
+    if (cleaning) return `${room.name} is being cleaned until ${hourLabel(cleaning.bufferEnd)}`;
     const next = busy.filter((b) => b.start > now).sort((a, b) => a.start - b.start)[0];
     return `${room.name} is open${next ? ` until ${hourLabel(next.start)}` : ' for the rest of the day'}`;
   });
@@ -29,6 +32,8 @@ function nowSummary(rooms, avail, settings) {
 
 export default function Home() {
   const { data: siteData, status } = useSite();
+  const info = useStudioInfo();
+  const photos = useGallery();
   const navigate = useNavigate();
   const today = siteData?.now.date;
   const [date, setDate] = useState(null);
@@ -47,14 +52,18 @@ export default function Home() {
     return Object.fromEntries(
       avail.rooms.map((r) => [
         r.id,
-        r.busy.map((b) => ({
-          ...b,
-          label: b.kind === 'block' ? 'Closed' : 'Booked',
-          sub: rangeLabel(b.start, b.end),
-        })),
+        withBufferClips(
+          r.busy.map((b, i) => ({
+            ...b,
+            id: b.id ?? `${b.kind}-${i}`,
+            label: b.kind === 'block' ? 'Closed' : 'Booked',
+            sub: rangeLabel(b.start, b.end),
+          })),
+          bufferMinutes(siteData?.settings)
+        ),
       ])
     );
-  }, [avail]);
+  }, [avail, siteData]);
 
   const isToday = avail && avail.date === avail.now.date;
   const nowHour = isToday ? avail.now.hour + avail.now.minute / 60 : null;
@@ -75,7 +84,7 @@ export default function Home() {
               <i className="rec-dot" aria-hidden="true" /> {site.name}
             </p>
             <h1 id="hero-title" className="hero-title">
-              Book a room
+              Book
             </h1>
             <p className="hero-lead">Pick a day, a start time and a room. Your details come on the next page.</p>
             <Link className="resched-nudge" to="/check">
@@ -164,6 +173,7 @@ export default function Home() {
                 rooms={rooms}
                 openHour={settings.open_hour}
                 closeHour={settings.close_hour}
+                settings={settings}
                 items={items}
                 nowHour={nowHour}
                 earliest={earliest}
@@ -240,9 +250,9 @@ export default function Home() {
             <h2 id="gallery-title" className="section-title">Inside the studio</h2>
           </div>
           <div className="gallery">
-            {site.gallery.length > 0
-              ? site.gallery.map((g) => (
-                  <figure key={g.src} className="gallery-item">
+            {photos.length > 0
+              ? photos.map((g) => (
+                  <figure key={g.id ?? g.src} className="gallery-item">
                     <img src={g.src} alt={g.alt} loading="lazy" />
                   </figure>
                 ))
@@ -293,22 +303,22 @@ export default function Home() {
             <p className="label section-kicker">Find the door</p>
             <h2 id="visit-title" className="section-title">Visit</h2>
             <address className="visit-address">
-              {site.address.map((l) => (
-                <span key={l} className="block">
+              {info.address.map((l, i) => (
+                <span key={i} className="block">
                   {l}
                 </span>
               ))}
             </address>
-            {site.landmark && <p className="visit-landmark">{site.landmark}</p>}
+            {info.landmark && <p className="visit-landmark">{info.landmark}</p>}
             {settings && <p className="visit-hours">{hoursSentence(settings)}.</p>}
             <div className="visit-actions">
-              <a className="btn btn-dark" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(site.mapsQuery)}`} target="_blank" rel="noreferrer">
+              <a className="btn btn-dark" href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(info.mapsQuery)}`} target="_blank" rel="noreferrer">
                 <Navigation /> Get directions
               </a>
-              <a className="btn btn-outline" href={`tel:${site.phone.replace(/\s/g, '')}`}>
+              <a className="btn btn-outline" href={`tel:${info.phone.replace(/\s/g, '')}`}>
                 <Phone /> Call
               </a>
-              <a className="btn btn-outline" href={site.messenger} target="_blank" rel="noreferrer">
+              <a className="btn btn-outline" href={info.messenger} target="_blank" rel="noreferrer">
                 <MessageCircle /> Messenger
               </a>
             </div>
@@ -316,7 +326,7 @@ export default function Home() {
           <div className="visit-map">
             <iframe
               title={`Map showing ${site.name}`}
-              src={`https://www.google.com/maps?q=${encodeURIComponent(site.mapsQuery)}&output=embed`}
+              src={`https://www.google.com/maps?q=${encodeURIComponent(info.mapsQuery)}&output=embed`}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />

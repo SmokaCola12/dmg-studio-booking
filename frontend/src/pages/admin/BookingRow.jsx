@@ -1,5 +1,5 @@
 import { StatusBadge } from '../../components/ui.jsx';
-import { formatPhone, peso, rangeLabel, relativeDay } from '../../lib/format.js';
+import { bookingEnd, bookingStart, formatPhone, peso, rangeLabel, relativeDay } from '../../lib/format.js';
 
 /** One booking in a list. The whole row opens the booking; `action` sits at the end. */
 export function BookingRow({ booking: b, today, onOpen, action, showStatus = true }) {
@@ -8,7 +8,7 @@ export function BookingRow({ booking: b, today, onOpen, action, showStatus = tru
       <button type="button" className="b-row-main" onClick={() => onOpen(b)}>
         <span className="b-row-when tnum">
           <span className="b-row-day">{relativeDay(b.date, today)}</span>
-          <span className="b-row-time">{rangeLabel(b.startHour, b.endHour)}</span>
+          <span className="b-row-time">{rangeLabel(bookingStart(b), bookingEnd(b))}</span>
         </span>
         <span className="b-row-who">
           <span className="b-row-name">{b.bandName || b.name}</span>
