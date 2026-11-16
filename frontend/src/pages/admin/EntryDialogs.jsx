@@ -137,7 +137,7 @@ export function NewBookingDialog({ open, onOpenChange, defaults, onCreated }) {
     >
       <form onSubmit={submit} noValidate>
         <div className="form-grid">
-          <Field label="Room">
+          <Field label="Studio">
             {(p) => (
               <select {...p} className="select" value={form.roomId} onChange={set('roomId', true)}>
                 {rooms.map((r) => (
@@ -302,10 +302,10 @@ export function BlockDialog({ open, onOpenChange, defaults, onCreated }) {
     >
       <form onSubmit={submit} noValidate>
         <div className="form-grid">
-          <Field label="Room" className="span-2">
+          <Field label="Studio" className="span-2">
             {(p) => (
               <select {...p} className="select" value={form.roomId} onChange={set('roomId')}>
-                <option value="">All rooms</option>
+                <option value="">All studios</option>
                 {(day?.rooms || []).map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}

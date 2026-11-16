@@ -1,0 +1,2 @@
+# OCR worker, WASM core and language data: copied from node_modules by scripts/copy-ocr.mjs
+public/ocr/

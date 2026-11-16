@@ -525,6 +525,36 @@ button,
   background: var(--bad-bg);
   color: var(--bad);
 }
+/* Expired: outlined and empty, the opposite of a live clip. The outline and label carry it, not colour alone. */
+.badge-expired {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink-2);
+}
+
+/* GCash payment stage badges (staff) */
+.pay-badge-proof_submitted,
+.pay-badge-awaiting_proof,
+.pay-badge-not_received,
+.pay-badge-refund_due {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.pay-badge-deposit_received,
+.pay-badge-paid {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+.pay-badge-expired,
+.pay-badge-refunded {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink-2);
+}
+.paid-mark {
+  color: var(--ok);
+  letter-spacing: 0.04em;
+}
 
 /* Notices */
 .notice {

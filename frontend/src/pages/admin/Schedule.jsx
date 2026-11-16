@@ -9,6 +9,7 @@ import { BookingRow } from './BookingRow.jsx';
 import { BookingDialog } from './BookingDialog.jsx';
 import { BlockDialog, NewBookingDialog } from './EntryDialogs.jsx';
 import { BufferConflicts, boardItems, boardRooms } from './Overview.jsx';
+import { isDead } from '../../lib/schedule.js';
 
 export default function Schedule() {
   const { version, changed } = useAdmin();
@@ -45,8 +46,8 @@ export default function Schedule() {
 
   if (day.error && !d) return <LoadError error={day.error} onRetry={day.reload} />;
   const roomName = (id) => d?.rooms.find((r) => r.id === id)?.name;
-  const activeBookings = d ? d.bookings.filter((b) => b.status !== 'cancelled') : [];
-  const cancelled = d ? d.bookings.filter((b) => b.status === 'cancelled') : [];
+  const activeBookings = d ? d.bookings.filter((b) => !isDead(b.status)) : [];
+  const cancelled = d ? d.bookings.filter((b) => isDead(b.status)) : [];
 
   return (
     <div className="a-page">
@@ -120,7 +121,7 @@ export default function Schedule() {
                 <span>
                   <strong className="tnum">{rangeLabel(bl.startHour, bl.endHour)}</strong>
                   {', '}
-                  {bl.roomId === null ? 'All rooms' : roomName(bl.roomId)}
+                  {bl.roomId === null ? 'All studios' : roomName(bl.roomId)}
                   {bl.reason && <span className="muted">, {bl.reason}</span>}
                 </span>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeBlock(bl.id)}>
@@ -149,7 +150,7 @@ export default function Schedule() {
           {cancelled.length > 0 && (
             <details className="a-details">
               <summary>
-                {cancelled.length} cancelled {cancelled.length === 1 ? 'booking' : 'bookings'}
+                {cancelled.length} cancelled or expired {cancelled.length === 1 ? 'booking' : 'bookings'}
               </summary>
               <ul className="b-list">
                 {cancelled.map((b) => (

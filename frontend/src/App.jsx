@@ -6,6 +6,7 @@ import { SiteFooter, SiteHeader } from './components/SiteChrome.jsx';
 import Home from './pages/Home.jsx';
 import Book from './pages/Book.jsx';
 import BookingDone from './pages/BookingDone.jsx';
+import PayBooking from './pages/PayBooking.jsx';
 import CheckBooking from './pages/CheckBooking.jsx';
 
 // The admin is a separate chunk so the public site stays light on phones.
@@ -65,6 +66,7 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="book" element={<Book />} />
           <Route path="booking/:code" element={<BookingDone />} />
+          <Route path="booking/:code/pay" element={<PayBooking />} />
           <Route path="check" element={<CheckBooking />} />
           <Route path="*" element={<NotFound />} />
         </Route>

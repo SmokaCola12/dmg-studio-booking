@@ -39,7 +39,7 @@ export default function Login({ onLogin }) {
           <span>{site.shortName}</span>
         </Link>
         <h1 className="a-login-title">Staff login</h1>
-        <p className="a-login-sub">Manage bookings, rooms and opening hours.</p>
+        <p className="a-login-sub">Manage bookings, studios and opening hours.</p>
         <Field label="Password" error={error}>
           {(p) => (
             <input

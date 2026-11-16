@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AlertCircle, CalendarClock, CalendarPlus, Info } from 'lucide-react';
 import { RescheduleDialog } from '../components/RescheduleDialog.jsx';
+import { paymentStage } from '../components/PaymentNote.jsx';
 import { api } from '../lib/api.js';
 import { BookingTicket } from '../components/BookingTicket.jsx';
 import { ConfirmDialog, Field } from '../components/ui.jsx';
@@ -18,6 +19,7 @@ export default function CheckBooking() {
   const [code, setCode] = useState(params.get('code') || '');
   const [phone, setPhone] = useState('');
   const [booking, setBooking] = useState(null);
+  const [serverTime, setServerTime] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -44,6 +46,7 @@ export default function CheckBooking() {
     try {
       const r = await api.lookupBooking(code.trim(), phone);
       setBooking(r.booking);
+      setServerTime(r.serverTime || null);
     } catch (err) {
       setBooking(null);
       setError(err.message);
@@ -51,6 +54,18 @@ export default function CheckBooking() {
       setLoading(false);
     }
   };
+
+  // When a payment hold runs out on screen, ask the server what happened to the booking.
+  const refreshBooking = useCallback(() => {
+    if (!booking) return;
+    api
+      .lookupBooking(booking.code, phone)
+      .then((r) => {
+        setBooking(r.booking);
+        setServerTime(r.serverTime || null);
+      })
+      .catch(() => {});
+  }, [booking, phone]);
 
   const cancel = async () => {
     setCancelling(true);
@@ -92,6 +107,11 @@ export default function CheckBooking() {
   };
 
   const cutoff = siteData?.settings.cancel_cutoff_hours;
+  // Money already received can only be refunded by the studio, so online cancel is hidden for it.
+  // Once money is in, or a receipt was sent, the booking can't be cancelled online (refunds are handled by the studio).
+  const payStage = booking ? paymentStage(booking) : '';
+  const paidOnline = ['deposit_received', 'paid', 'proof_submitted', 'not_received'].includes(payStage);
+  const isActive = booking ? ['pending', 'confirmed'].includes(booking.status) : false;
 
   return (
     <div className="page wrap narrow">
@@ -149,25 +169,33 @@ export default function CheckBooking() {
 
       {booking && (
         <>
-          <BookingTicket booking={booking} />
+          <BookingTicket booking={booking} serverTime={serverTime} onPaymentExpire={refreshBooking} />
           <div className="done-actions">
             {['pending', 'confirmed'].includes(booking.status) && (
               <button type="button" className="btn btn-dark" onClick={() => downloadIcs(booking, info.address)}>
                 <CalendarPlus /> Add to calendar
               </button>
             )}
-            {booking.canCancel && siteData && (
+            {(booking.canReschedule ?? booking.canCancel) && siteData && (
               <button type="button" className="btn btn-outline" onClick={startResched}>
                 <CalendarClock /> Change date or time
               </button>
             )}
-            {booking.canCancel && (
+            {booking.canCancel && !paidOnline && (
               <button type="button" className="btn btn-outline" onClick={() => setConfirmOpen(true)}>
                 Cancel this booking
               </button>
             )}
           </div>
-          {['pending', 'confirmed'].includes(booking.status) && !booking.canCancel && cutoff !== undefined && (
+          {isActive && paidOnline && (
+            <div className="notice" style={{ marginTop: 16 }}>
+              <Info />
+              <span>
+                {['deposit_received', 'paid'].includes(payStage) ? 'You’ve already paid' : 'You’ve already sent a receipt'}, so this booking can’t be cancelled online. To cancel it, message the studio.
+              </span>
+            </div>
+          )}
+          {isActive && !paidOnline && !booking.canCancel && cutoff !== undefined && (
             <div className="notice" style={{ marginTop: 16 }}>
               <Info />
               <span>

@@ -1199,3 +1199,301 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* GCash payments */
+.gp-list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gp-list.is-refreshing {
+  opacity: 0.7;
+}
+
+.gp-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--room, var(--line-strong));
+  border-radius: var(--radius-m);
+  background: var(--surface);
+}
+
+.gp-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.gp-who {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gp-name {
+  font-weight: 750;
+  font-size: var(--t-md);
+}
+
+.gp-meta {
+  color: var(--ink-3);
+  font-size: var(--t-sm);
+  overflow-wrap: anywhere;
+}
+
+.gp-status {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 6px;
+}
+
+.gp-total {
+  font-weight: 750;
+}
+
+.gp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gp-chip {
+  padding: 3px 10px;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--t-sm);
+}
+
+.gp-chip-warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+/* What the browser read off the receipt screenshot: hints for staff */
+.gp-check {
+  display: grid;
+  gap: 6px;
+}
+
+.gp-check-title {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--t-xs, 12px);
+}
+
+.gp-chip-link {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.gp-proofs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+}
+
+.gp-thumb {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.gp-thumb img,
+.gp-thumb-empty {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-s);
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: var(--muted-bg);
+  color: var(--ink-3);
+  font-size: var(--t-xs);
+}
+
+.gp-thumb-label {
+  display: grid;
+  font-weight: 700;
+  font-size: var(--t-sm);
+}
+
+.gp-thumb-label small {
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.gp-thumb-label .gp-dup {
+  color: var(--warn);
+}
+
+.gp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Money buttons are for thumbs: full height, and they take the whole row on a phone */
+.gp-actions .btn,
+.gp-balance-buttons .btn {
+  min-height: 48px;
+  font-size: var(--t-sm);
+}
+
+.gp-balance,
+.bd-pay {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+}
+
+.gp-balance-due {
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+
+.gp-balance-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gp-foot {
+  display: grid;
+  gap: 8px;
+}
+
+.gp-link {
+  font-size: var(--t-sm);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.gp-events summary {
+  cursor: pointer;
+  font-size: var(--t-sm);
+  color: var(--ink-3);
+}
+
+.gp-events ol {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-sm);
+  color: var(--ink-2);
+}
+
+.gp-events li {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.gp-ev-when {
+  color: var(--ink-3);
+}
+
+.gp-note-field {
+  margin-top: 12px;
+}
+
+.lightbox-img {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
+  border-radius: var(--radius-s);
+  object-fit: contain;
+}
+
+.bd-pay-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bd-pay-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.bd-pay-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--t-sm);
+}
+
+.bd-pay-list dt {
+  color: var(--ink-3);
+}
+
+.bd-pay-list dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* QR settings */
+.qr-settings {
+  display: grid;
+  gap: 10px;
+}
+
+.qr-summary {
+  font-size: var(--t-sm);
+}
+
+.qr-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.qr-preview {
+  display: block;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: var(--radius-m);
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .gp-actions .btn,
+  .gp-balance-buttons .btn {
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+  .gp-card {
+    padding: 14px;
+  }
+  .gp-status {
+    justify-items: start;
+  }
+  .gp-events li {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

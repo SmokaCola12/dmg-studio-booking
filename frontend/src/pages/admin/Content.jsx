@@ -400,7 +400,7 @@ function PhotoCard({ photo, index, last, disabled, onMove, onDelete, onSaveAlt }
           id={`alt-${photo.id}`}
           className="input"
           maxLength={160}
-          placeholder="Describe it, e.g. Room A with the drum kit"
+          placeholder="Describe it, e.g. Studio A with the drum kit"
           value={alt}
           onChange={(e) => setAlt(e.target.value)}
           onBlur={commit}

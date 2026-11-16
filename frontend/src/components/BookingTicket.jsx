@@ -1,9 +1,12 @@
 import { toast } from 'sonner';
 import { Copy } from 'lucide-react';
 import { StatusBadge } from './ui.jsx';
-import { bookingEnd, bookingStart, dateLabel, formatPhone, hoursText, PAYMENT_LABELS, peso, rangeLabel } from '../lib/format.js';
+import { bookingEnd, bookingStart, dateLabel, formatPhone, hoursText, paymentLabel, peso, rangeLabel } from '../lib/format.js';
+import { PaymentNote, paymentStage } from './PaymentNote.jsx';
 
-export function BookingTicket({ booking }) {
+export function BookingTicket({ booking, serverTime, onPaymentExpire }) {
+  const stage = paymentStage(booking);
+  const p = booking.payment;
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(booking.code);
@@ -33,7 +36,7 @@ export function BookingTicket({ booking }) {
             </dd>
           </div>
           <div>
-            <dt>Room</dt>
+            <dt>Studio</dt>
             <dd>{booking.room?.name}</dd>
           </div>
           <div>
@@ -61,8 +64,10 @@ export function BookingTicket({ booking }) {
           <div>
             <dt>Payment</dt>
             <dd>
-              {PAYMENT_LABELS[booking.paymentMethod]}
-              {booking.paymentRef && `, ref ${booking.paymentRef}`}
+              {paymentLabel(booking)}
+              {stage && p.amountDue > 0 && <span className="tnum">{` · ${peso(p.amountDue)} online`}</span>}
+              {stage === 'paid' && <strong className="paid-mark"> PAID</strong>}
+              {!stage && booking.paymentRef && `, ref ${booking.paymentRef}`}
             </dd>
           </div>
           <div>
@@ -70,6 +75,7 @@ export function BookingTicket({ booking }) {
             <dd className="tnum">{peso(booking.total)}</dd>
           </div>
         </dl>
+        <PaymentNote booking={booking} serverTime={serverTime} onExpire={onPaymentExpire} />
       </div>
     </div>
   );

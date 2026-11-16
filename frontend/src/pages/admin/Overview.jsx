@@ -4,19 +4,21 @@ import { toast } from 'sonner';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { adminApi } from '../../lib/api.js';
 import { bookingEnd, bookingStart, dateLabel, minutesText, peso, rangeLabel } from '../../lib/format.js';
-import { bufferMinutes, withBufferClips } from '../../lib/schedule.js';
+import { bufferMinutes, isDead, withBufferClips } from '../../lib/schedule.js';
 import { DayView } from '../../components/DayView.jsx';
 import { MonthCalendar } from '../../components/MonthCalendar.jsx';
 import { LoadError, PageHead, useAdmin, useLoader } from './admin-shared.jsx';
 import { BookingRow } from './BookingRow.jsx';
 import { BookingDialog } from './BookingDialog.jsx';
 import { NewBookingDialog } from './EntryDialogs.jsx';
+import { gcashLink, needsPaymentCheck } from './payment-shared.jsx';
 
 export function boardItems(day) {
   const items = {};
   for (const r of day.rooms) items[r.id] = [];
   for (const b of day.bookings) {
-    if (b.status === 'cancelled' || !items[b.roomId]) continue;
+    // Cancelled and expired (a GCash hold that ran out) bookings don't hold the room, so they stay off the board.
+    if (isDead(b.status) || !items[b.roomId]) continue;
     items[b.roomId].push({
       kind: 'booking',
       id: b.id,
@@ -44,7 +46,7 @@ export function boardItems(day) {
 export function BufferConflicts({ day }) {
   const list = day?.bufferConflicts || [];
   if (!list.length) return null;
-  const roomName = (id) => day.rooms.find((r) => r.id === id)?.name || 'a room';
+  const roomName = (id) => day.rooms.find((r) => r.id === id)?.name || 'a studio';
   const byId = Object.fromEntries(day.bookings.map((b) => [b.id, b]));
   return (
     <div className="buffer-conflicts" role="status">
@@ -137,7 +139,7 @@ export default function Overview() {
         <div>
           <dt>Bookings today</dt>
           <dd className="tnum">{d ? d.today.length : '–'}</dd>
-          <span className="stat-sub">{d ? `${todayHours} ${todayHours === 1 ? 'hour' : 'hours'} of room time` : ' '}</span>
+          <span className="stat-sub">{d ? `${todayHours} ${todayHours === 1 ? 'hour' : 'hours'} of studio time` : ' '}</span>
         </div>
         <div>
           <dt>Waiting for approval</dt>
@@ -199,9 +201,16 @@ export default function Overview() {
                             onOpen={openBooking}
                             showStatus={false}
                             action={
-                              <button type="button" className="btn btn-dark btn-sm" disabled={confirming === b.id} onClick={() => quickConfirm(b)}>
-                                {confirming === b.id ? 'Confirming…' : 'Confirm'}
-                              </button>
+                              needsPaymentCheck(b) ? (
+                                // A GCash booking is confirmed from GCash payments, where the payment gets recorded.
+                                <Link className="btn btn-outline btn-sm" to={gcashLink(b)}>
+                                  Check the payment
+                                </Link>
+                              ) : (
+                                <button type="button" className="btn btn-dark btn-sm" disabled={confirming === b.id} onClick={() => quickConfirm(b)}>
+                                  {confirming === b.id ? 'Confirming…' : 'Confirm'}
+                                </button>
+                              )
                             }
                           />
                         ))}
@@ -228,7 +237,7 @@ export default function Overview() {
       <section className="a-section" aria-labelledby="board-title">
         <div className="a-section-head">
           <h2 id="board-title" className="a-h2">
-            {date === today ? 'Today’s rooms' : `Rooms on ${date ? dateLabel(date, { long: true }) : ''}`}
+            {date === today ? 'Today’s studios' : `Studios on ${date ? dateLabel(date, { long: true }) : ''}`}
           </h2>
           <Link to="/admin/schedule" className="a-link">
             Open schedule

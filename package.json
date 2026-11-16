@@ -14,7 +14,11 @@
     "dev:web": "npm run dev -w frontend",
     "build": "npm run build -w frontend",
     "start": "npm run start -w backend",
-    "seed:demo": "npm run seed:demo -w backend"
+    "seed:demo": "npm run seed:demo -w backend",
+    "test": "node --test --test-concurrency=1",
+    "check:env": "node deploy/check-env.mjs",
+    "backup": "node deploy/backup.mjs",
+    "backup:verify": "node deploy/verify-backup.mjs"
   },
   "engines": {
     "node": ">=20.12"

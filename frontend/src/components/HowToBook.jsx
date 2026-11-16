@@ -32,7 +32,7 @@ const SCENES = {
     <div className="sc sc-result">
       <b className="sc-find-btn">Find booking</b>
       <div className="sc-ticket">
-        <p><strong>Room A</strong></p>
+        <p><strong>Studio A</strong></p>
         <p>Today, 2 – 4 PM</p>
         <span className="sc-ok">Confirmed</span>
       </div>
@@ -42,7 +42,7 @@ const SCENES = {
   moveBtn: (
     <div className="sc sc-result sc-move">
       <div className="sc-ticket sc-ticket--static">
-        <p><strong>Room A</strong></p>
+        <p><strong>Studio A</strong></p>
         <p>Sat, 2 – 4 PM</p>
         <span className="sc-ok">Confirmed</span>
       </div>
@@ -53,7 +53,7 @@ const SCENES = {
   moved: (
     <div className="sc sc-moved">
       <div className="sc-ticket sc-ticket--static">
-        <p><strong>Room A</strong></p>
+        <p><strong>Studio A</strong></p>
         <p className="sc-time-swap">
           <s>Sat, 2 – 4 PM</s>
           <span>Sun, 5 – 7 PM</span>
@@ -66,8 +66,8 @@ const SCENES = {
     <div className="sc sc-room-pick">
       <div className="sc-days sc-days--2">
         <span className="sc-hl" />
-        <span>Room A</span>
-        <span>Room B</span>
+        <span>Studio A</span>
+        <span>Studio B</span>
       </div>
       <Cursor />
     </div>
@@ -97,7 +97,7 @@ const SCENES = {
   ),
   list: (
     <div className="sc sc-list">
-      <p className="sc-room"><i /> Room A</p>
+      <p className="sc-room"><i /> Studio A</p>
       <div className="sc-row sc-row--off"><span>10 – 12</span><span>Booked</span></div>
       <div className="sc-row"><span>12 – 10 PM</span><span>Open</span><b className="sc-book">Book</b></div>
       <Cursor />
@@ -105,7 +105,7 @@ const SCENES = {
   ),
   timeline: (
     <div className="sc sc-tl">
-      <p className="sc-room"><i /> Room A</p>
+      <p className="sc-room"><i /> Studio A</p>
       <div className="sc-lane">
         {Array.from({ length: 8 }, (_, n) => (
           <span key={n} className={n === 5 ? 'sc-cell sc-cell--target' : 'sc-cell'} />
@@ -144,16 +144,16 @@ const SCENES = {
 };
 
 const HOME_STEPS = [
-  { scene: 'calendar', title: 'Pick a day on the calendar', line: 'A dot means there is room. Greyed days are full or closed.' },
-  { scene: 'hours', title: 'Choose your room and hours', line: 'Only times that fit can be picked.' },
+  { scene: 'calendar', title: 'Pick a day on the calendar', line: 'A dot means the day still has open times. Greyed days are full or closed.' },
+  { scene: 'hours', title: 'Choose your studio and hours', line: 'Only times that fit can be picked.' },
   { scene: 'time', title: 'Tap a start time', line: 'Open times only. Then press Book now.' },
   { scene: 'timeline', title: 'Or tap an empty hour below', line: 'On the schedule, gaps are open. Colored bars are taken.' },
   { scene: 'confirm', title: 'Add your details, confirm', line: 'You get a booking code. Find it later in My booking.' },
 ];
 
 const BOOK_STEPS = [
-  { scene: 'room', title: 'Pick a room', line: 'Each room has its own price and size.' },
-  { scene: 'calendar', title: 'Pick a day on the calendar', line: 'A dot means there is room. Greyed days are full or closed.' },
+  { scene: 'room', title: 'Pick a studio', line: 'Each studio has its own price and size.' },
+  { scene: 'calendar', title: 'Pick a day on the calendar', line: 'A dot means the day still has open times. Greyed days are full or closed.' },
   { scene: 'hours', title: 'Choose how many hours', line: 'Only times that fit can be picked.' },
   { scene: 'time', title: 'Tap a start time', line: 'Open times only. Then press Continue.' },
   { scene: 'confirm', title: 'Add your details, confirm', line: 'You get a booking code. Find it later in My booking.' },
@@ -166,7 +166,7 @@ const FIND_STEPS = [
 ];
 
 const RESCHED_STEPS = [
-  { scene: 'moveBtn', title: 'Find your booking, tap Change time', line: 'Same room, same hours. Only the day and start move.' },
+  { scene: 'moveBtn', title: 'Find your booking, tap Change time', line: 'Same studio, same hours. Only the day and start move.' },
   { scene: 'time', title: 'Pick a new day and start time', line: 'Open times only. Your own slot is shown as yours.' },
   { scene: 'moved', title: 'Done, it is moved', line: 'Same booking code. Add the new time to your calendar.' },
 ];

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
+import { isolatedEnv } from './helpers/isolation.js';
 
 // Cleaning buffer after each booking, :30 start times and their API surface. The real server runs as a child
 // process against a throwaway database (never data/studio.db). Each test uses its own future date so tests do
@@ -16,6 +17,8 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dmg-buffer-'));
 const PASSWORD = 'test-password-buffer';
 const PHONE = '09171234567';
 
+const children = [];
+process.on('exit', () => children.forEach((c) => c.kill()));
 const freePort = () =>
   new Promise((resolve, reject) => {
     const s = net.createServer();
@@ -30,26 +33,31 @@ const freePort = () =>
 async function startServer(dbPath, extraEnv = {}) {
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
-  const env = {
-    ...process.env,
+  // All app variables pinned (tests/helpers/isolation.js): RECEIPT_DIR in the temp folder (never data/private/receipts),
+  // SMTP to a closed local port with no credentials, blanks for the rest so the real .env cannot fill anything in.
+  const env = isolatedEnv(tmp, {
     PORT: String(port),
     DB_PATH: dbPath,
     UPLOAD_DIR: path.join(tmp, 'uploads'),
+    RECEIPT_DIR: path.join(tmp, 'receipts'),
+    SMTP_HOST: '127.0.0.1',
+    SMTP_PORT: '1',
     ADMIN_PASSWORD: PASSWORD,
     ADMIN_TOKEN_SECRET: 'test-secret-buffer',
     ...extraEnv,
-  };
-  delete env.STUDIO_TZ;
+  });
   const child = spawn(process.execPath, [path.join(root, 'backend', 'index.js')], { cwd: root, env, stdio: 'ignore' });
+  children.push(child); // a leaked child keeps the test runner alive forever, so every child is killed in after() and on exit
   let up = false;
-  for (let i = 0; i < 100 && !up; i++) {
+  for (let i = 0; i < 100 && !up && child.exitCode === null; i++) {
     try {
-      up = (await fetch(`${base}/api/site`)).ok;
+      up = (await fetch(`${base}/api/site`, { signal: AbortSignal.timeout(5000) })).ok && child.exitCode === null;
     } catch {
       /* not up yet */
     }
     if (!up) await new Promise((r) => setTimeout(r, 100));
   }
+  if (!up) child.kill();
   assert.ok(up, 'server did not start');
   const login = await fetch(`${base}/api/admin/login`, {
     method: 'POST',
@@ -73,9 +81,11 @@ async function startServer(dbPath, extraEnv = {}) {
     return { status: res.status, body: json };
   }
   const stop = async () => {
-    const exited = new Promise((r) => child.once('exit', r));
-    child.kill();
-    await exited;
+    if (child.exitCode === null && child.signalCode === null) {
+      const exited = new Promise((r) => child.once('exit', r));
+      child.kill();
+      await Promise.race([exited, new Promise((r) => setTimeout(r, 5000))]);
+    }
     await new Promise((r) => setTimeout(r, 200));
   };
   return { api, admin: (m, u, b) => api(m, `/admin${u}`, b, { auth: true }), stop, child };
@@ -92,8 +102,9 @@ before(async () => {
 });
 
 after(async () => {
-  await srv.stop();
-  fs.rmSync(tmp, { recursive: true, force: true });
+  await srv?.stop().catch(() => {});
+  for (const c of children) c.kill();
+  await fs.promises.rm(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => {});
 });
 
 // ---------- helpers ----------

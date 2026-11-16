@@ -3,6 +3,22 @@ import { studioNow, daysBetween, weekday, hoursUntil, addDays } from './time.js'
 
 const ACTIVE_STATUSES = ['pending', 'confirmed'];
 
+/** Current instant as a UTC ISO string, the format hold_expires_at is stored and compared in. */
+export const nowIso = () => new Date().toISOString();
+
+/**
+ * The one rule for "this booking holds its time slot": it is pending or confirmed, and not a pending GCash booking
+ * whose hold has run out (even if the sweep has not marked it expired yet). Every slot query uses this fragment.
+ * Returns { sql, params }; `alias` is a table alias such as 'b'.
+ */
+export function holdingWhere(alias = '') {
+  const p = alias ? `${alias}.` : '';
+  return {
+    sql: `(${p}status IN (${ACTIVE_STATUSES.map(() => '?').join(',')}) AND NOT (${p}status = 'pending' AND ${p}hold_expires_at IS NOT NULL AND ${p}hold_expires_at <= ?))`,
+    params: [...ACTIVE_STATUSES, nowIso()],
+  };
+}
+
 // Start times sit on a 30-minute grid. Inside this file every time is whole minutes from midnight on the
 // studio clock; decimal hours (always a multiple of 0.5, so exact) only appear in what the API returns.
 const STEP = 30;
@@ -16,12 +32,10 @@ const endMinutes = (b) => b.end_hour * 60 + (b.start_minute || 0);
 
 /** Bookings that hold a time slot (pending or confirmed) plus blocks, for one date. */
 export function busyForDate(date) {
+  const hold = holdingWhere();
   const bookings = db
-    .prepare(
-      `SELECT * FROM bookings WHERE date = ? AND status IN (${ACTIVE_STATUSES.map(() => '?').join(',')})
-       ORDER BY start_hour, start_minute`
-    )
-    .all(date, ...ACTIVE_STATUSES);
+    .prepare(`SELECT * FROM bookings WHERE date = ? AND ${hold.sql} ORDER BY start_hour, start_minute`)
+    .all(date, ...hold.params);
   const blocks = db.prepare('SELECT * FROM blocks WHERE date = ? ORDER BY start_hour').all(date);
   return { bookings, blocks };
 }
@@ -129,12 +143,13 @@ export function monthAvailability(month) {
   const last = dates[dates.length - 1];
 
   const rooms = db.prepare('SELECT id FROM rooms WHERE active = 1').all();
+  const hold = holdingWhere();
   const bookings = db
     .prepare(
       `SELECT room_id, date, start_hour, start_minute, end_hour FROM bookings
-       WHERE date BETWEEN ? AND ? AND status IN (${ACTIVE_STATUSES.map(() => '?').join(',')})`
+       WHERE date BETWEEN ? AND ? AND ${hold.sql}`
     )
-    .all(first, last, ...ACTIVE_STATUSES);
+    .all(first, last, ...hold.params);
   const blocks = db.prepare('SELECT room_id, date, start_hour, end_hour FROM blocks WHERE date BETWEEN ? AND ?').all(first, last);
 
   const byDate = new Map();
@@ -201,7 +216,7 @@ export function planBooking({
 }) {
   const s = getSettings();
   const room = db.prepare('SELECT * FROM rooms WHERE id = ?').get(roomId);
-  if (!room || (!room.active && !ignoreLeadTime)) return { ok: false, error: 'That room is not available.' };
+  if (!room || (!room.active && !ignoreLeadTime)) return { ok: false, error: 'That studio is not available.' };
 
   if (!Number.isInteger(paidHours) || paidHours < s.min_hours || paidHours > s.max_hours)
     return { ok: false, error: `Bookings are ${s.min_hours} to ${s.max_hours} hours long.` };
@@ -269,8 +284,20 @@ export function planBooking({
   };
 }
 
-export function canCustomerCancel(booking) {
+/** Customers may change (move) an active booking until the cutoff before it starts. */
+export function canCustomerChange(booking) {
   const s = getSettings();
   if (!ACTIVE_STATUSES.includes(booking.status)) return false;
   return hoursUntil(booking.date, booking.start_hour + (booking.start_minute || 0) / 60) >= s.cancel_cutoff_hours;
+}
+
+/** Payment states in which money may already have been sent: a screenshot is on file, or the payment was received. */
+export const PAID_OR_PROOF_STATUSES = ['proof_submitted', 'not_received', 'received'];
+
+/**
+ * Same cutoff, but a GCash booking cannot be cancelled online once a screenshot was uploaded or the payment was
+ * received (refunds are manual, so staff have to see it). Customers can still pay later or move it.
+ */
+export function canCustomerCancel(booking) {
+  return canCustomerChange(booking) && !PAID_OR_PROOF_STATUSES.includes(booking.payment_status);
 }

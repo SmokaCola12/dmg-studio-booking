@@ -24,7 +24,7 @@ export function SiteHeader() {
       <div className="wrap site-header-inner">
         <Wordmark />
         <nav className="site-nav" aria-label="Main">
-          <a href="/#rooms" className="nav-link nav-hide-sm">Rooms</a>
+          <a href="/#rooms" className="nav-link nav-hide-sm">Studios</a>
           <a href="/#visit" className="nav-link nav-hide-sm">Visit</a>
           <NavLink to="/check" className="nav-link">My booking</NavLink>
           {!onBooking && (

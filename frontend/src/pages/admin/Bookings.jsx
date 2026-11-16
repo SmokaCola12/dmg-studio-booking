@@ -16,6 +16,7 @@ const STATUS_FILTERS = [
   ['completed', 'Done'],
   ['cancelled', 'Cancelled'],
   ['no_show', 'No-show'],
+  ['expired', 'Expired'],
 ];
 
 const WHEN = [
@@ -100,8 +101,8 @@ export default function Bookings() {
             </button>
           ))}
         </div>
-        <select className="select filter-select" value={room} onChange={(e) => setParam('room', e.target.value)} aria-label="Room">
-          <option value="">All rooms</option>
+        <select className="select filter-select" value={room} onChange={(e) => setParam('room', e.target.value)} aria-label="Studio">
+          <option value="">All studios</option>
           {rooms.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}

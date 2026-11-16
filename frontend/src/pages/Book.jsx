@@ -3,12 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import NumberFlow from '@number-flow/react';
 import { toast } from 'sonner';
 import clsx from 'clsx';
-import { AlertCircle, Check, Copy, Gift, Info } from 'lucide-react';
+import { AlertCircle, Check, Gift, Info } from 'lucide-react';
 import { useSite } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
 import { api } from '../lib/api.js';
-import { bufferMinutes, bufferText, startOptions, promoFreeHours, withBufferClips } from '../lib/schedule.js';
-import { addDays, dateLabel, hourLabel, hoursText, peso, rangeLabel, splitStart } from '../lib/format.js';
+import { bufferMinutes, startOptions, promoFreeHours, withBufferClips } from '../lib/schedule.js';
+import { addDays, dateLabel, depositAmount, hourLabel, hoursText, peso, rangeLabel, splitStart } from '../lib/format.js';
 import { MonthCalendar } from '../components/MonthCalendar.jsx';
 import { useMonthAvailability } from '../lib/useMonthAvailability.js';
 import { DayView } from '../components/DayView.jsx';
@@ -94,7 +94,8 @@ function BookingFlow({ siteData }) {
     notes: '',
     ...readDraft(),
   }));
-  const [payment, setPayment] = useState({ method: 'pay_at_studio', ref: '' });
+  // method: 'pay_at_studio' | 'gcash'. plan (GCash only): 'half' pays 50% now, 'full' pays 100% now.
+  const [payment, setPayment] = useState({ method: 'pay_at_studio', plan: 'half' });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [slotNotice, setSlotNotice] = useState('');
@@ -150,6 +151,9 @@ function BookingFlow({ siteData }) {
   const endHour = selected ? selected.hour + paidHours + freeHours : null;
   const total = room ? room.hourlyRate * paidHours : 0;
   const promoEligible = promoFreeHours(paidHours, settings) > 0;
+  // GCash: what is paid now, rounded up to a whole peso. The rest is paid at the studio.
+  const gcash = payment.method === 'gcash' && settings.gcash_enabled;
+  const amountDue = gcash ? depositAmount(total, payment.plan) : total;
 
   const goTo = (n) => {
     setStep(n);
@@ -180,22 +184,24 @@ function BookingFlow({ siteData }) {
   const submit = async () => {
     setSubmitting(true);
     try {
-      const { booking, freeNote } = await api.createBooking({
+      const { booking, freeNote, serverTime } = await api.createBooking({
         roomId,
         date,
         ...splitStart(selected.hour),
         paidHours,
         ...details,
-        paymentMethod: payment.method,
-        paymentRef: payment.method === 'gcash' ? payment.ref : '',
+        paymentMethod: gcash ? 'gcash' : 'pay_at_studio',
+        ...(gcash ? { paymentPlan: payment.plan } : {}),
       });
       try {
-        sessionStorage.setItem('last_booking', JSON.stringify({ booking, phone: details.phone }));
+        sessionStorage.setItem('last_booking', JSON.stringify({ booking, phone: details.phone, serverTime }));
       } catch {
         /* ignore */
       }
       if (freeNote) toast(freeNote);
-      navigate(`/booking/${booking.code}`, { state: { booking, phone: details.phone, justBooked: true } });
+      // GCash bookings go straight to the QR and receipt upload; the slot is held while they pay.
+      const nextPage = gcash ? `/booking/${booking.code}/pay` : `/booking/${booking.code}`;
+      navigate(nextPage, { state: { booking, phone: details.phone, serverTime, justBooked: true } });
     } catch (err) {
       if (err.status === 400 && Object.keys(err.fields).length) {
         setErrors(err.fields);
@@ -214,8 +220,9 @@ function BookingFlow({ siteData }) {
     }
   };
 
+  // On the last step the button says what is paid now: the deposit for GCash, the total otherwise.
   const ctaLabel =
-    step === 0 ? 'Continue' : step === 1 ? 'Review booking' : submitting ? 'Booking…' : `Book for ${peso(total)}`;
+    step === 0 ? 'Continue' : step === 1 ? 'Review booking' : submitting ? 'Booking…' : `Book for ${peso(amountDue)}`;
   const ctaDisabled = (step === 0 && !selected) || submitting;
 
   return (
@@ -255,7 +262,7 @@ function BookingFlow({ siteData }) {
             {step === 0 && (
               <>
                 <section className="book-block" aria-labelledby="pick-room">
-                  <h2 id="pick-room" className="block-title">Room</h2>
+                  <h2 id="pick-room" className="block-title">Studio</h2>
                   <div className="room-options" role="radiogroup" aria-labelledby="pick-room">
                     {rooms.map((r) => (
                       <button
@@ -332,7 +339,6 @@ function BookingFlow({ siteData }) {
                           setStartHour(h);
                         }}
                       />
-                      {bufferText(settings) && <p className="bk-note bk-buffer-note">{bufferText(settings)}</p>}
                     </div>
                   </div>
                   {avail && room && avail.window.open && (
@@ -390,6 +396,7 @@ function BookingFlow({ siteData }) {
                 payment={payment}
                 setPayment={setPayment}
                 settings={settings}
+                total={total}
               />
             )}
 
@@ -403,6 +410,9 @@ function BookingFlow({ siteData }) {
                 freeHours={freeHours}
                 details={details}
                 payment={payment}
+                gcash={gcash}
+                amountDue={amountDue}
+                total={total}
                 settings={settings}
                 onEdit={goTo}
               />
@@ -414,7 +424,7 @@ function BookingFlow({ siteData }) {
               <h2 className="summary-title">Your booking</h2>
               <dl className="summary-list">
                 <div>
-                  <dt>Room</dt>
+                  <dt>Studio</dt>
                   <dd>{room?.name}</dd>
                 </div>
                 <div>
@@ -428,7 +438,7 @@ function BookingFlow({ siteData }) {
               </dl>
               {step > 0 && step < 3 && (
                 <button type="button" className="btn btn-ghost btn-sm summary-change" onClick={() => goTo(0)}>
-                  Change room, day or time
+                  Change studio, day or time
                 </button>
               )}
               <div className="summary-price">
@@ -453,15 +463,31 @@ function BookingFlow({ siteData }) {
                     format={{ style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }}
                   />
                 </div>
+                {gcash && (
+                  <>
+                    <div className="price-line price-now">
+                      <span>Pay now by GCash ({payment.plan === 'half' ? '50%' : '100%'})</span>
+                      <span className="tnum">{peso(amountDue)}</span>
+                    </div>
+                    {total - amountDue > 0 && (
+                      <div className="price-line">
+                        <span>Balance at the studio</span>
+                        <span className="tnum">{peso(total - amountDue)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
               <button type="button" className="btn btn-primary btn-lg btn-block summary-cta" onClick={next} disabled={ctaDisabled}>
                 {ctaLabel}
               </button>
               {step === 2 && (
                 <p className="summary-fine">
-                  {settings.auto_confirm
-                    ? 'Your booking is confirmed as soon as you book.'
-                    : 'The studio confirms new bookings. You’ll get a booking code to check the status.'}
+                  {gcash
+                    ? `Next you’ll scan a QR and upload your GCash receipt. Your slot is held for ${settings.gcash_hold_minutes || 30} minutes while you pay.`
+                    : settings.auto_confirm
+                      ? 'Your booking is confirmed as soon as you book.'
+                      : 'The studio confirms new bookings. You’ll get a booking code to check the status.'}
                 </p>
               )}
             </div>
@@ -475,15 +501,20 @@ function BookingFlow({ siteData }) {
           <span className="book-bar-time tnum">
             {selected ? `${dateLabel(date)}, ${rangeLabel(selected.hour, endHour)}` : 'Pick a start time'}
           </span>
-          <NumberFlow
-            className="book-bar-total tnum"
-            value={total}
-            locales="en-PH"
-            format={{ style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }}
-          />
+          <span className="book-bar-amount">
+            {/* GCash: the bar shows what is paid now (same as the button) and the total; pay at the studio: the total */}
+            <NumberFlow
+              className="book-bar-total tnum"
+              value={gcash ? amountDue : total}
+              locales="en-PH"
+              format={{ style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }}
+            />
+            {gcash && total !== amountDue && <span className="book-bar-sub tnum"> now · {peso(total)} total</span>}
+            {gcash && total === amountDue && <span className="book-bar-sub tnum"> now</span>}
+          </span>
         </div>
         <button type="button" className="btn btn-primary btn-lg" onClick={next} disabled={ctaDisabled}>
-          {step === 2 ? (submitting ? 'Booking…' : 'Book now') : ctaLabel}
+          {step === 2 ? (submitting ? 'Booking…' : gcash ? ctaLabel : 'Book now') : ctaLabel}
         </button>
       </div>
     </div>
@@ -564,20 +595,13 @@ function TimePicker({ options, lefts, loading, window: win, value, onChange, pai
   );
 }
 
-function DetailsStep({ details, setDetails, errors, setErrors, room, payment, setPayment, settings }) {
+function DetailsStep({ details, setDetails, errors, setErrors, room, payment, setPayment, settings, total }) {
   const set = (k) => (e) => {
     const value = e.target.value;
     setDetails((d) => ({ ...d, [k]: value }));
     if (errors[k]) setErrors(({ [k]: _drop, ...rest }) => rest);
   };
-  const copyNumber = async () => {
-    try {
-      await navigator.clipboard.writeText(settings.gcash_number.replace(/\s/g, ''));
-      toast.success('GCash number copied');
-    } catch {
-      toast('Copy didn’t work here. The number is ' + settings.gcash_number);
-    }
-  };
+  const holdMinutes = settings.gcash_hold_minutes || 30;
   return (
     <>
       <section className="book-block" aria-labelledby="who">
@@ -604,7 +628,7 @@ function DetailsStep({ details, setDetails, errors, setErrors, room, payment, se
               />
             )}
           </Field>
-          <Field label="Email" optional error={errors.email}>
+          <Field label="Email" optional error={errors.email} hint="Payment updates are sent here.">
             {(p) => (
               <input
                 {...p}
@@ -672,36 +696,35 @@ function DetailsStep({ details, setDetails, errors, setErrors, room, payment, se
               className="pay-option"
               onClick={() => setPayment((p) => ({ ...p, method: 'gcash' }))}
             >
-              <span className="pay-option-title">Send a GCash downpayment</span>
-              <span className="pay-option-desc">Holds your slot while the studio confirms.</span>
+              <span className="pay-option-title">Pay with GCash</span>
+              <span className="pay-option-desc">Pay 50% or 100% now to hold your slot.</span>
             </button>
           )}
         </div>
         {payment.method === 'gcash' && settings.gcash_enabled && (
-          <div className="gcash-box">
-            <div className="gcash-account">
-              <div>
-                <span className="gcash-label">Send to</span>
-                <span className="gcash-name">{settings.gcash_name}</span>
-                <span className="gcash-number tnum">{settings.gcash_number}</span>
-              </div>
-              <button type="button" className="btn btn-outline btn-sm" onClick={copyNumber}>
-                <Copy /> Copy number
-              </button>
+          <div className="pay-plans-wrap">
+            <div className="pay-plans" role="radiogroup" aria-label="How much to pay now">
+              {[
+                ['half', 'Pay 50% now', total > 0 ? `${peso(depositAmount(total, 'half'))} now, ${peso(total - depositAmount(total, 'half'))} at the studio` : ''],
+                ['full', 'Pay 100% now', total > 0 ? `${peso(total)} now, nothing left to pay` : ''],
+              ].map(([plan, title, desc]) => (
+                <button
+                  key={plan}
+                  type="button"
+                  role="radio"
+                  aria-checked={payment.plan === plan}
+                  className="pay-plan"
+                  onClick={() => setPayment((p) => ({ ...p, plan }))}
+                >
+                  <span className="pay-plan-title">{title}</span>
+                  <span className="pay-plan-amount tnum">{peso(depositAmount(total, plan))}</span>
+                  <span className="pay-plan-desc">{desc}</span>
+                </button>
+              ))}
             </div>
-            <Field label="GCash reference number" optional hint="You can also send the receipt on Messenger later.">
-              {(p) => (
-                <input
-                  {...p}
-                  className="input tnum"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={payment.ref}
-                  onChange={(e) => setPayment((x) => ({ ...x, ref: e.target.value }))}
-                  maxLength={40}
-                />
-              )}
-            </Field>
+            <p className="bk-note">
+              Next you’ll get a GCash QR with the exact amount. Pay, then upload a screenshot of your receipt. Your slot is held for {holdMinutes} minutes while you do.
+            </p>
           </div>
         )}
       </section>
@@ -709,7 +732,7 @@ function DetailsStep({ details, setDetails, errors, setErrors, room, payment, se
   );
 }
 
-function ReviewStep({ room, date, start, end, paidHours, freeHours, details, payment, settings, onEdit }) {
+function ReviewStep({ room, date, start, end, paidHours, freeHours, details, payment, gcash, amountDue, total, settings, onEdit }) {
   return (
     <>
       <section className="book-block" aria-labelledby="review-time">
@@ -763,7 +786,9 @@ function ReviewStep({ room, date, start, end, paidHours, freeHours, details, pay
           <div>
             <dt>Payment</dt>
             <dd>
-              {payment.method === 'gcash' ? `GCash downpayment${payment.ref ? `, ref ${payment.ref}` : ''}` : 'Pay at the studio'}
+              {gcash
+                ? `GCash, ${payment.plan === 'half' ? '50%' : '100%'} now (${peso(amountDue)})${total - amountDue > 0 ? `, ${peso(total - amountDue)} at the studio` : ''}`
+                : 'Pay at the studio'}
             </dd>
           </div>
           {details.notes && (

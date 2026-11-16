@@ -7,6 +7,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { isolatedEnv } from './helpers/isolation.js';
 
 // The real server (backend/index.js) runs as a child process against a throwaway
 // database and upload folder, because /media and the error handler live in index.js.
@@ -35,19 +36,24 @@ before(async () => {
   base = `http://127.0.0.1:${port}`;
   child = spawn(process.execPath, [path.join(root, 'backend', 'index.js')], {
     cwd: root,
-    env: {
-      ...process.env,
+    // All app variables pinned (tests/helpers/isolation.js): RECEIPT_DIR in the temp folder (never data/private/receipts),
+    // SMTP to a closed local port with no credentials, blanks for the rest so the real .env cannot fill anything in.
+    env: isolatedEnv(tmp, {
       PORT: String(port),
       DB_PATH: path.join(tmp, 'test.db'),
       UPLOAD_DIR: uploadDir,
+      RECEIPT_DIR: path.join(tmp, 'receipts'),
+      SMTP_HOST: '127.0.0.1',
+      SMTP_PORT: '1',
       ADMIN_PASSWORD: PASSWORD,
       ADMIN_TOKEN_SECRET: 'test-secret-content',
-    },
+    }),
     stdio: 'ignore',
   });
+  process.on('exit', () => child.kill());
   for (let i = 0; i < 100; i++) {
     try {
-      const r = await fetch(`${base}/api/site`);
+      const r = await fetch(`${base}/api/site`, { signal: AbortSignal.timeout(5000) });
       if (r.ok) break;
     } catch {
       /* not up yet */
@@ -64,9 +70,13 @@ before(async () => {
 });
 
 after(async () => {
-  child.kill();
-  await new Promise((r) => setTimeout(r, 300));
-  fs.rmSync(tmp, { recursive: true, force: true });
+  if (child && child.exitCode === null) {
+    const exited = new Promise((r) => child.once('exit', r));
+    child.kill();
+    await Promise.race([exited, new Promise((r) => setTimeout(r, 5000))]);
+  }
+  await new Promise((r) => setTimeout(r, 200));
+  await fs.promises.rm(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => {});
 });
 
 const galleryDir = path.join(uploadDir, 'gallery');

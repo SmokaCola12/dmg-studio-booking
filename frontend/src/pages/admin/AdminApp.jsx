@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, Route, Routes, Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarDays, DoorOpen, ExternalLink, LayoutList, LogOut, Settings as SettingsIcon, Sun, Images } from 'lucide-react';
+import { CalendarDays, DoorOpen, ExternalLink, LayoutList, LogOut, Settings as SettingsIcon, Sun, Images, Wallet } from 'lucide-react';
 import { adminApi, adminToken } from '../../lib/api.js';
 import { site } from '../../config/site.js';
 import { AdminContext } from './admin-shared.jsx';
@@ -12,13 +12,16 @@ import Schedule from './Schedule.jsx';
 import Rooms from './Rooms.jsx';
 import Settings from './Settings.jsx';
 import Content from './Content.jsx';
+import GcashPayments from './GcashPayments.jsx';
 import '../../styles/admin.css';
 
+// badge: 'pending' counts bookings waiting for approval, 'payments' counts GCash receipts waiting to be checked.
 const NAV = [
   { to: '/admin', label: 'Today', icon: Sun, end: true },
-  { to: '/admin/bookings', label: 'Bookings', icon: LayoutList, badge: true },
+  { to: '/admin/bookings', label: 'Bookings', icon: LayoutList, badge: 'pending' },
+  { to: '/admin/gcash', label: 'GCash payments', short: 'GCash', icon: Wallet, badge: 'payments' },
   { to: '/admin/schedule', label: 'Schedule', icon: CalendarDays },
-  { to: '/admin/rooms', label: 'Rooms', icon: DoorOpen },
+  { to: '/admin/rooms', label: 'Studios', icon: DoorOpen },
   { to: '/admin/settings', label: 'Settings', icon: SettingsIcon },
   { to: '/admin/content', label: 'Studio page', icon: Images, desktopOnly: true }, // reached from Settings on phones
 ];
@@ -39,8 +42,10 @@ export default function AdminApp() {
 
 function AdminShell({ onLogout }) {
   const [pendingCount, setPendingCount] = useState(0);
+  const [paymentsWaiting, setPaymentsWaiting] = useState(0);
   const [version, setVersion] = useState(0); // bump to make pages reload after a change elsewhere
   const lastCount = useRef(null);
+  const lastPayments = useRef(null);
 
   const refreshPending = useCallback(() => {
     adminApi
@@ -55,6 +60,14 @@ function AdminShell({ onLogout }) {
         }
         lastCount.current = d.pendingCount;
         setPendingCount(d.pendingCount);
+
+        const waiting = d.paymentsWaiting || 0;
+        if (lastPayments.current !== null && waiting > lastPayments.current) {
+          toast('New GCash receipt to check', { description: 'Open GCash payments to confirm it.' });
+          setVersion((v) => v + 1);
+        }
+        lastPayments.current = waiting;
+        setPaymentsWaiting(waiting);
       })
       .catch(() => {});
   }, []);
@@ -77,7 +90,7 @@ function AdminShell({ onLogout }) {
   };
 
   return (
-    <AdminContext.Provider value={{ pendingCount, changed, version }}>
+    <AdminContext.Provider value={{ pendingCount, paymentsWaiting, changed, version }}>
       <div className="admin">
         <aside className="a-side">
           <Link to="/admin" className="wordmark a-wordmark">
@@ -89,17 +102,20 @@ function AdminShell({ onLogout }) {
             <span>{site.shortName}</span>
           </Link>
           <nav className="a-nav" aria-label="Admin">
-            {NAV.map(({ to, label, icon: Icon, end, badge }) => (
-              <NavLink key={to} to={to} end={end} className="a-nav-link">
-                <Icon aria-hidden="true" />
-                <span>{label}</span>
-                {badge && pendingCount > 0 && (
-                  <span className="a-count" aria-label={`${pendingCount} waiting for approval`}>
-                    {pendingCount}
-                  </span>
-                )}
-              </NavLink>
-            ))}
+            {NAV.map(({ to, label, icon: Icon, end, badge }) => {
+              const count = badge === 'pending' ? pendingCount : badge === 'payments' ? paymentsWaiting : 0;
+              return (
+                <NavLink key={to} to={to} end={end} className="a-nav-link">
+                  <Icon aria-hidden="true" />
+                  <span>{label}</span>
+                  {count > 0 && (
+                    <span className="a-count" aria-label={`${count} ${badge === 'payments' ? 'receipts to check' : 'waiting for approval'}`}>
+                      {count}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
           </nav>
           <div className="a-side-foot">
             <a href="/" target="_blank" rel="noreferrer" className="a-nav-link">
@@ -136,6 +152,7 @@ function AdminShell({ onLogout }) {
           <Routes>
             <Route index element={<Overview />} />
             <Route path="bookings" element={<Bookings />} />
+            <Route path="gcash" element={<GcashPayments />} />
             <Route path="schedule" element={<Schedule />} />
             <Route path="rooms" element={<Rooms />} />
             <Route path="settings" element={<Settings />} />
@@ -145,15 +162,18 @@ function AdminShell({ onLogout }) {
         </main>
 
         <nav className="a-tabbar" aria-label="Admin">
-          {NAV.filter((n) => !n.desktopOnly).map(({ to, label, icon: Icon, end, badge }) => (
-            <NavLink key={to} to={to} end={end} className="a-tab">
-              <span className="a-tab-icon">
-                <Icon aria-hidden="true" />
-                {badge && pendingCount > 0 && <span className="a-dot">{pendingCount}</span>}
-              </span>
-              <span>{label}</span>
-            </NavLink>
-          ))}
+          {NAV.filter((n) => !n.desktopOnly).map(({ to, label, short, icon: Icon, end, badge }) => {
+            const count = badge === 'pending' ? pendingCount : badge === 'payments' ? paymentsWaiting : 0;
+            return (
+              <NavLink key={to} to={to} end={end} className="a-tab">
+                <span className="a-tab-icon">
+                  <Icon aria-hidden="true" />
+                  {count > 0 && <span className="a-dot">{count}</span>}
+                </span>
+                <span>{short || label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
     </AdminContext.Provider>

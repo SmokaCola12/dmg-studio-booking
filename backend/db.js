@@ -86,6 +86,92 @@ if (!bookingColumns.includes('start_minute')) {
   db.exec('ALTER TABLE bookings ADD COLUMN start_minute INTEGER NOT NULL DEFAULT 0');
 }
 
+// GCash payments confirmed by staff. Existing rows keep the defaults, which read as "not a new-style GCash booking".
+//   payment_plan:    '' | 'half' | 'full'
+//   amount_due:      whole pesos due by GCash now
+//   payment_status:  '' | awaiting_proof | proof_submitted | not_received | received
+//   hold_expires_at: UTC ISO instant; only set while a pending booking waits for its first screenshot
+//   refund_status:   '' | refund_due | refunded
+const PAYMENT_COLUMNS = [
+  ["payment_plan", "TEXT NOT NULL DEFAULT ''"],
+  ['amount_due', 'INTEGER NOT NULL DEFAULT 0'],
+  ["payment_status", "TEXT NOT NULL DEFAULT ''"],
+  ['hold_expires_at', 'TEXT'],
+  ['proof_submitted_at', 'TEXT'],
+  ['paid_amount', 'INTEGER NOT NULL DEFAULT 0'],
+  ['balance_paid', 'INTEGER NOT NULL DEFAULT 0'],
+  ["balance_method", "TEXT NOT NULL DEFAULT ''"],
+  ['balance_recorded_at', 'TEXT'],
+  ["balance_recorded_by", "TEXT NOT NULL DEFAULT ''"],
+  ["refund_status", "TEXT NOT NULL DEFAULT ''"],
+];
+for (const [name, ddl] of PAYMENT_COLUMNS) {
+  if (!bookingColumns.includes(name)) db.exec(`ALTER TABLE bookings ADD COLUMN ${name} ${ddl}`);
+}
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_bookings_hold ON bookings(status, hold_expires_at);
+  CREATE INDEX IF NOT EXISTS idx_bookings_payment ON bookings(payment_status);
+
+  CREATE TABLE IF NOT EXISTS payment_proofs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    booking_id   INTEGER NOT NULL REFERENCES bookings(id),
+    file         TEXT NOT NULL UNIQUE,
+    mime         TEXT NOT NULL,
+    bytes        INTEGER NOT NULL,
+    sha256       TEXT NOT NULL,
+    kind         TEXT NOT NULL DEFAULT 'deposit',   -- deposit | balance
+    uploaded_by  TEXT NOT NULL DEFAULT 'customer',  -- customer | staff
+    uploaded_at  TEXT NOT NULL,                     -- UTC ISO
+    deleted_at   TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_proofs_booking ON payment_proofs(booking_id);
+  CREATE INDEX IF NOT EXISTS idx_proofs_sha ON payment_proofs(sha256);
+
+  -- Audit trail. Rows are never deleted.
+  CREATE TABLE IF NOT EXISTS payment_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    booking_id  INTEGER NOT NULL REFERENCES bookings(id),
+    at          TEXT NOT NULL,                      -- UTC ISO
+    actor       TEXT NOT NULL,                      -- customer | staff | system
+    staff_name  TEXT NOT NULL DEFAULT '',
+    action      TEXT NOT NULL,
+    amount      INTEGER,
+    method      TEXT NOT NULL DEFAULT '',
+    note        TEXT NOT NULL DEFAULT ''
+  );
+  CREATE INDEX IF NOT EXISTS idx_events_booking ON payment_events(booking_id);
+`);
+
+// Receipt hints read from the screenshot by the customer's browser (OCR). Untrusted: staff-only, never used to confirm.
+const proofColumns = db.prepare('PRAGMA table_info(payment_proofs)').all().map((c) => c.name);
+if (!proofColumns.includes('ocr_ref')) db.exec("ALTER TABLE payment_proofs ADD COLUMN ocr_ref TEXT NOT NULL DEFAULT ''");
+if (!proofColumns.includes('ocr_amount_centavos')) db.exec('ALTER TABLE payment_proofs ADD COLUMN ocr_amount_centavos INTEGER');
+
+/** Digits of a GCash reference, or '' when there are fewer than 8 or more than 20 (too short to compare safely). */
+export function refDigits(value) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits.length >= 8 && digits.length <= 20 ? digits : '';
+}
+
+// bookings.ref_digits mirrors payment_ref as digits only, so the same reference on two bookings can be found by index.
+if (!bookingColumns.includes('ref_digits')) {
+  db.exec("ALTER TABLE bookings ADD COLUMN ref_digits TEXT NOT NULL DEFAULT ''");
+}
+// The backfill runs on every start, not only right after the ALTER, so a start that died in between is finished by the
+// next one. It only looks at rows that have a reference but no digits yet, and writes nothing when those are all
+// references too short or too long to compare.
+db.transaction(() => {
+  const fill = db.prepare('UPDATE bookings SET ref_digits = ? WHERE id = ?');
+  for (const row of db.prepare("SELECT id, payment_ref FROM bookings WHERE payment_ref != '' AND ref_digits = ''").all()) {
+    const digits = refDigits(row.payment_ref);
+    if (digits) fill.run(digits, row.id);
+  }
+})();
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_bookings_ref_digits ON bookings(ref_digits) WHERE ref_digits != '';
+  CREATE INDEX IF NOT EXISTS idx_proofs_ocr_ref ON payment_proofs(ocr_ref) WHERE ocr_ref != '';
+`);
+
 // ---------- Settings ----------
 
 export const DEFAULT_SETTINGS = {
@@ -101,10 +187,15 @@ export const DEFAULT_SETTINGS = {
   promo_enabled: true,
   promo_buy_hours: 2,
   promo_free_hours: 1,
-  gcash_enabled: true,
-  gcash_name: 'Studio Owner',
-  gcash_number: '0917 000 0000',
+  gcash_enabled: true,       // online GCash also needs the studio's QR to be uploaded (see getGcashQr)
+  gcash_hold_minutes: 30,    // a pending GCash booking holds its slot this long while no screenshot is uploaded
+  receipt_retention_days: 60, // payment screenshots are deleted this long after the booking date
   closed_weekdays: [],       // 0 = Sunday ... 6 = Saturday
+  // Emails to the studio inbox. Admin only: never add these to PUBLIC_SETTING_KEYS.
+  notify_email: '',              // where staff emails go; '' = the SMTP_USER address
+  notify_new_booking: true,      // a customer booked on the website
+  notify_payment_proof: true,    // a customer uploaded a GCash receipt screenshot
+  notify_customer_changes: true, // a customer cancelled or rescheduled online
 };
 
 const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
@@ -128,6 +219,49 @@ export function saveSettings(partial) {
   });
   tx(Object.entries(partial).filter(([k]) => k in DEFAULT_SETTINGS));
   return getSettings();
+}
+
+// ---------- Studio GCash QR ----------
+// The uploaded QR text holds the owner's account details. It is stored under its own key (NOT in DEFAULT_SETTINGS, so
+// getSettings(), /api/site and /api/admin/schedule can never return it) and is read only through these two functions.
+
+const GCASH_QR_KEY = 'gcash_qr_payload';
+
+export function getGcashQr() {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(GCASH_QR_KEY);
+  if (!row) return null;
+  try {
+    const v = JSON.parse(row.value);
+    return typeof v === 'string' && v ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Saves the validated QR text, or removes it when `payload` is null. */
+export function saveGcashQr(payload) {
+  if (payload === null) db.prepare('DELETE FROM settings WHERE key = ?').run(GCASH_QR_KEY);
+  else {
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(
+      GCASH_QR_KEY,
+      JSON.stringify(payload)
+    );
+  }
+}
+
+/** Old manual-GCash settings (send-to name and number), kept readable but no longer used. Null when never stored. */
+export function getLegacyGcash() {
+  const rows = db.prepare("SELECT key, value FROM settings WHERE key IN ('gcash_name', 'gcash_number')").all();
+  if (!rows.length) return null;
+  const byKey = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const read = (k) => {
+    try {
+      return typeof JSON.parse(byKey[k]) === 'string' ? JSON.parse(byKey[k]) : '';
+    } catch {
+      return '';
+    }
+  };
+  return { gcashName: read('gcash_name'), gcashNumber: read('gcash_number') };
 }
 
 // ---------- Owner-editable contact details ----------
@@ -186,8 +320,8 @@ if (roomCount === 0) {
     'INSERT INTO rooms (name, description, hourly_rate, capacity, gear, color, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
   insertRoom.run(
-    'Room A',
-    'Our biggest room. Fits a five-piece band with space to move. Good for full-band rehearsals and live demo takes.',
+    'Studio A',
+    'Our biggest studio. Fits a five-piece band with space to move. Good for full-band rehearsals and live demo takes.',
     400,
     8,
     JSON.stringify(['5-piece drum kit with cymbals', '2 guitar amps', 'Bass amp', 'Keyboard stand', '4 vocal mics', 'PA with 8-channel mixer']),
@@ -195,8 +329,8 @@ if (roomCount === 0) {
     1
   );
   insertRoom.run(
-    'Room B',
-    'A smaller room for duos, acoustic sets, songwriting, and practice sessions.',
+    'Studio B',
+    'A smaller studio for duos, acoustic sets, songwriting, and practice sessions.',
     300,
     4,
     JSON.stringify(['Compact drum kit', 'Guitar amp', 'Bass amp', '2 vocal mics', 'PA with 4-channel mixer']),
