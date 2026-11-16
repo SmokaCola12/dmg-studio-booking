@@ -36,7 +36,6 @@ function staffBlock(d) {
     `Phone: ${d.phone || 'not given'}`,
     d.email ? `Email: ${d.email}` : null,
     '',
-    `Studio: ${d.room}`,
     `When: ${d.when}`,
     `Hours: ${d.hours}`,
     `Total: ${d.total}`,

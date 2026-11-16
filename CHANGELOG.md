@@ -7,6 +7,16 @@ Categories: **Added**, **Changed**, **Fixed**, **Removed**, **Security**.
 ## [Unreleased]
 
 ### Changed
+- The footer's "Talk to us" now also shows the studio email address (a mailto link, hidden when no email is set).
+- The default studio contact details on the site are now 0917 483 5387 and dmgperformance@gmail.com.
+- Site header, footer and staff area show the DMG logo with "Studio" next to it.
+- FAQ "What if we run late?" now says extending is not possible online and must be asked at the studio.
+- House rule on instruments now reads "You can bring your own instruments, cables, sticks and picks." (the cymbals sentence is removed).
+- "Inside the studio": tapping a photo enlarges it over a dimmed page, with left and right arrows (also keys and swipe) that loop through the photos. The "Studio B for duos" placeholder is removed.
+
+- The DMG logo replaces the old coloured-bars mark in the site header, footer, staff area and login, and is now the browser tab and home-screen icon.
+- Studio alert emails to staff no longer include the "Studio: ..." line.
+- The "Need to reschedule? Move your booking" link on the home page now sits below the live timeline instead of in the hero text.
 - The server now refuses to start without `--dev` (exit code 1, one `[startup] Refusing to start: ...` line) when `ADMIN_PASSWORD` is missing, blank, `changeme`, the `.env.example` placeholder or shorter than 8 characters; there is no `changeme` fallback outside `npm run dev`. A missing or short (under 32 characters) `ADMIN_TOKEN_SECRET` only warns. Values are never logged.
 - Customer and admin wording says "studio" instead of "room" everywhere (pages, admin, server messages and emails). Code names and API fields (`rooms`, `roomId`) are unchanged, and studio names saved in the database are left as typed.
 - The line "30 min is kept after each session for cleaning." is no longer shown on the Book page, the home booking card or the reschedule dialog. The cleaning gap itself still applies.

@@ -1,17 +1,22 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { MapPin, Phone, MessageCircle } from 'lucide-react';
+import { MapPin, Phone, Mail, MessageCircle } from 'lucide-react';
 import { site } from '../config/site.js';
 import { useStudioInfo } from '../lib/site-data.jsx';
+
+/** The DMG logo and the word "Studio". Takes its text colour from where it sits. */
+export function BrandMark() {
+  return (
+    <>
+      <i className="logo-mark" role="img" aria-label="DMG" />
+      <span className="brand-word">Studio</span>
+    </>
+  );
+}
 
 export function Wordmark() {
   return (
     <Link to="/" className="wordmark" aria-label={`${site.name}, home`}>
-      <svg viewBox="0 0 32 32" aria-hidden="true">
-        <rect x="3" y="8" width="14" height="7" rx="2" fill="var(--marigold)" />
-        <rect x="12" y="18" width="15" height="7" rx="2" fill="var(--teal)" />
-        <rect x="20" y="4" width="2.4" height="24" rx="1.2" fill="var(--rec)" />
-      </svg>
-      <span>{site.shortName}</span>
+      <BrandMark />
     </Link>
   );
 }
@@ -66,6 +71,12 @@ export function SiteFooter() {
             <Phone aria-hidden="true" />
             <a href={`tel:${info.phone.replace(/\s/g, '')}`}>{info.phone}</a>
           </p>
+          {info.email && (
+            <p className="footer-line">
+              <Mail aria-hidden="true" />
+              <a href={`mailto:${info.email}`}>{info.email}</a>
+            </p>
+          )}
           <p className="footer-line">
             <MessageCircle aria-hidden="true" />
             <a href={info.messenger} target="_blank" rel="noreferrer">
