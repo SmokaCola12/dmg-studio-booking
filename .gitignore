@@ -4,6 +4,8 @@ dist
 data/*.db
 data/*.db-*
 data/uploads/
+data/private/
+backups/
 .DS_Store
 
 # agents api run history

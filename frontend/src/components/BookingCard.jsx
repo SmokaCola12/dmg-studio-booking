@@ -6,7 +6,7 @@ import { site } from '../config/site.js';
 import { useStudioInfo } from '../lib/site-data.jsx';
 import { useAvailability } from '../lib/useAvailability.js';
 import { useMonthAvailability } from '../lib/useMonthAvailability.js';
-import { bufferText, startOptions } from '../lib/schedule.js';
+import { startOptions } from '../lib/schedule.js';
 import { addDays, dateLabel, hoursSentence, hoursText, peso, rangeLabel } from '../lib/format.js';
 import { MonthCalendar } from './MonthCalendar.jsx';
 
@@ -93,7 +93,7 @@ export function BookingCard({ rooms, settings, today }) {
 
       <div className="bk-options">
         <div className="bk-opt">
-          <span className={rooms.length > 1 ? 'label' : 'sr-only'} id="bk-room-label">Room</span>
+          <span className={rooms.length > 1 ? 'label' : 'sr-only'} id="bk-room-label">Studio</span>
           <div className="bk-chips" role="radiogroup" aria-labelledby="bk-room-label">
             {rooms.map((r) => (
               <button
@@ -165,7 +165,7 @@ export function BookingCard({ rooms, settings, today }) {
             <p className="bk-empty">{closedReason} Pick another day.</p>
           ) : chips.length === 0 ? (
             <p className="bk-empty">
-              Nothing open for {hoursText(hours)} in {room.name} on this day. Try fewer hours, another room or another day.
+              Nothing open for {hoursText(hours)} in {room.name} on this day. Try fewer hours, another studio or another day.
             </p>
           ) : (
             <div className="bk-slots" role="radiogroup" aria-label="Start time">
@@ -184,7 +184,6 @@ export function BookingCard({ rooms, settings, today }) {
               ))}
             </div>
           )}
-          {bufferText(settings) && <p className="bk-note bk-buffer-note">{bufferText(settings)}</p>}
           <p id="bk-hint" className={clsx('bk-hint', chosen && 'is-ready')} aria-live="polite">
             {chosen
               ? `${room.name}, ${dateLabel(shownDate)}, ${rangeLabel(chosen.hour, chosen.hour + hours)} · ${peso(total)}`

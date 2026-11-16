@@ -1,13 +1,11 @@
 import crypto from 'node:crypto';
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
+// guard.js stops the server before this point when the password is missing, default or short, unless it runs with --dev
+// (where it only warns). The "changeme" fallback is therefore only ever reachable in --dev.
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD?.trim() ? process.env.ADMIN_PASSWORD : 'changeme';
 // Without a fixed secret, tokens are signed with a random key and admins are logged out on restart.
 const SECRET = process.env.ADMIN_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 const TOKEN_TTL_HOURS = 12;
-
-if (!process.env.ADMIN_PASSWORD) {
-  console.warn('[auth] ADMIN_PASSWORD is not set. Using the default "changeme" — set it in .env before going live.');
-}
 
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 const sign = (data) => crypto.createHmac('sha256', SECRET).update(data).digest('base64url');

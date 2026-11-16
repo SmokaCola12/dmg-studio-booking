@@ -6,7 +6,10 @@ import path from 'node:path';
 
 // Throwaway database; must be set before the backend modules load.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dmg-month-'));
-process.env.DB_PATH = path.join(tmp, 'test.db');
+// public.js loads payments.js (mailer) and receipts.js (creates RECEIPT_DIR and deletes *.tmp in it), so every app
+// variable is pinned in this process too: temp DB_PATH / UPLOAD_DIR / RECEIPT_DIR, no SMTP credentials.
+const { isolateThisProcess } = await import('./helpers/isolation.js');
+isolateThisProcess(tmp, { DB_PATH: path.join(tmp, 'test.db') });
 
 const { default: express } = await import('express');
 const { db, saveSettings, DEFAULT_SETTINGS } = await import('../backend/db.js');
@@ -25,10 +28,11 @@ before(async () => {
   base = `http://127.0.0.1:${server.address().port}/api`;
 });
 
-after(() => {
+after(async () => {
+  server.closeAllConnections?.();
   server.close();
   db.close();
-  fs.rmSync(tmp, { recursive: true, force: true });
+  await fs.promises.rm(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => {});
 });
 
 beforeEach(() => {

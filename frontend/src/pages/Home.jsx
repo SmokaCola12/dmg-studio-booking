@@ -86,7 +86,7 @@ export default function Home() {
             <h1 id="hero-title" className="hero-title">
               Book
             </h1>
-            <p className="hero-lead">Pick a day, a start time and a room. Your details come on the next page.</p>
+            <p className="hero-lead">Pick a day, a start time and a studio. Your details come on the next page.</p>
             <Link className="resched-nudge" to="/check">
               <CalendarClock aria-hidden="true" /> Need to reschedule? Move your booking
             </Link>
@@ -158,7 +158,7 @@ export default function Home() {
               </div>
             ) : siteData && rooms.length === 0 ? (
               <div className="board-empty">
-                <p>The schedule shows up here once the studio adds its rooms.</p>
+                <p>The schedule shows up here once studios are added.</p>
               </div>
             ) : !siteData || !avail ? (
               <div className="board-skeleton" aria-label="Loading schedule">
@@ -205,8 +205,8 @@ export default function Home() {
       <section className="section" id="rooms" aria-labelledby="rooms-title">
         <div className="wrap">
           <div className="section-head">
-            <p className="label section-kicker">Rooms / rates</p>
-            <h2 id="rooms-title" className="section-title">Pick your room</h2>
+            <p className="label section-kicker">Studios / rates</p>
+            <h2 id="rooms-title" className="section-title">Pick your studio</h2>
             <p className="section-lead">Backline is set up and checked before you walk in. The rate is per hour for the whole band, not per head.</p>
           </div>
 
@@ -237,7 +237,7 @@ export default function Home() {
               </article>
             ))}
             {status === 'ready' && rooms.length === 0 && (
-              <p className="section-lead">Rooms will show up here once the studio adds them.</p>
+              <p className="section-lead">Studios will show up here once they are added.</p>
             )}
           </div>
         </div>
@@ -246,7 +246,7 @@ export default function Home() {
       <section className="section section-alt" aria-labelledby="gallery-title">
         <div className="wrap">
           <div className="section-head">
-            <p className="label section-kicker">The rooms, as they are</p>
+            <p className="label section-kicker">The studios, as they are</p>
             <h2 id="gallery-title" className="section-title">Inside the studio</h2>
           </div>
           <div className="gallery">

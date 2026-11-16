@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { Info } from 'lucide-react';
 import { ScheduleBoard } from './ScheduleBoard.jsx';
 import { STATUS_LABELS, hourLabel, rangeLabel } from '../lib/format.js';
-import { startOptions } from '../lib/schedule.js';
+import { holds, startOptions } from '../lib/schedule.js';
 
 function readStored(key, fallback) {
   try {
@@ -35,7 +35,7 @@ function openStretches(roomItems, openHour, closeHour, earliest, settings) {
 
   // Same rule as the Book page: only list a stretch if a session of the minimum length fits in it
   // including the cleaning time before the next booking. The row starts at the first start that fits.
-  const busy = taken.filter((it) => it.kind === 'block' || (it.kind === 'booking' && it.status !== 'cancelled'));
+  const busy = taken.filter((it) => it.kind === 'block' || (it.kind === 'booking' && holds(it.status)));
   const starts = startOptions({
     busy,
     settings: { ...settings, open_hour: openHour, close_hour: closeHour, promo_enabled: false },

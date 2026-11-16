@@ -106,9 +106,56 @@ export const STATUS_LABELS = {
   completed: 'Done',
   cancelled: 'Cancelled',
   no_show: 'No-show',
+  expired: 'Expired',
 };
 
 export const PAYMENT_LABELS = {
   pay_at_studio: 'Pay at the studio',
   gcash: 'GCash',
 };
+
+/** half → "50%", full → "100%" */
+export const PLAN_LABELS = { half: '50%', full: '100%' };
+
+/** What is paid online now: half rounds up to a whole peso, full is the total. Matches the server. */
+export const depositAmount = (total, plan) => (plan === 'half' ? Math.ceil((total || 0) / 2) : total || 0);
+
+/** Where a GCash payment stands, in staff wording. `stage` comes from the server. */
+export const PAYMENT_STAGE_LABELS = {
+  awaiting_proof: 'Waiting for screenshot',
+  proof_submitted: 'To check',
+  not_received: 'Not received',
+  deposit_received: 'Deposit received',
+  paid: 'PAID',
+  expired: 'Hold expired',
+  refund_due: 'Refund due',
+  refunded: 'Refunded',
+};
+
+/** "GCash 50%" for a new-style GCash booking, otherwise the plain payment method. */
+export function paymentLabel(b) {
+  if (b.paymentMethod === 'gcash' && b.payment?.plan) return `GCash ${PLAN_LABELS[b.payment.plan] || ''}`.trim();
+  return PAYMENT_LABELS[b.paymentMethod] || '';
+}
+
+/** 754000 ms → "12:34" */
+export function clockText(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+/** An ISO instant shown on the studio clock, e.g. "Nov 14, 3:05 PM". */
+export function instantLabel(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+/** Whole bytes as "2.4 MB" */
+export function sizeText(bytes) {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}

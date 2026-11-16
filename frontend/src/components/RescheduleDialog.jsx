@@ -5,7 +5,7 @@ import { Info } from 'lucide-react';
 import { Dialog } from './ui.jsx';
 import { api } from '../lib/api.js';
 import { useAvailability } from '../lib/useAvailability.js';
-import { bufferText, startOptions } from '../lib/schedule.js';
+import { startOptions } from '../lib/schedule.js';
 import { addDays, bookingEnd, bookingStart, dateLabel, hourLabel, hoursText, rangeLabel, splitStart } from '../lib/format.js';
 
 /** Move a booking to another date or start time. Room and paid hours stay the same. */
@@ -125,7 +125,6 @@ export function RescheduleDialog({ open, onOpenChange, booking, phone, settings,
               ))}
             </div>
           )}
-          {bufferText(settings) && <p className="bk-note bk-buffer-note">{bufferText(settings)}</p>}
         </div>
 
         {error && (

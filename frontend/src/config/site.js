@@ -5,9 +5,9 @@
 export const site = {
   name: 'DMG Studio',
   shortName: 'DMG Studio',
-  tagline: 'Rehearsal rooms for bands. Amps warm, kit tuned, you just plug in.',
+  tagline: 'Rehearsal studios for bands. Amps warm, kit tuned, you just plug in.',
   intro:
-    'Backlined rooms with a drum kit, amps and PA already up. Bring guitars, sticks and cables, and play. Pick an open hour on the board below and book it from your phone.',
+    'Backlined studios with a drum kit, amps and PA already up. Bring guitars, sticks and cables, and play. Pick an open hour on the board below and book it from your phone.',
 
   // Where people find you. The owner can override the contact details below in /admin/content; these are the defaults.
   address: ['10-U-A Baltazar St', 'Grace Park West, Caloocan, 1405 Metro Manila'],
@@ -24,7 +24,7 @@ export const site = {
   // Shown in the "Before you come" section
   houseRules: [
     'Arrive 10 minutes early so you can set up on time. Your slot ends on the hour.',
-    'Bring your own instruments, cables, sticks and picks. Cymbals are provided in the bigger room.',
+    'Bring your own instruments, cables, sticks and picks. Cymbals are provided in the bigger studio.',
     'Food stays outside. Water in sealed bottles is fine.',
     'Damage to studio gear is charged at repair cost.',
     'No smoking or vaping inside the building.',
@@ -37,7 +37,7 @@ export const site = {
     },
     {
       q: 'How do I pay?',
-      a: 'Pay at the studio when you arrive, or send a GCash downpayment when you book. The booking page shows the GCash details.',
+      a: 'Pay at the studio when you arrive, or pay 50% or 100% by GCash when you book: scan the QR on the booking page, upload a screenshot of your receipt, and the studio confirms it. Your slot is held while you pay, and if you pay 50% the rest is due at the studio.',
     },
     {
       q: 'What if we run late?',
@@ -50,5 +50,5 @@ export const site = {
   ],
 
   // Gallery photos are uploaded in /admin/content. These labels show on the placeholders until the first photo is added.
-  galleryPlaceholders: ['Room A, full band setup', 'Drum kit and cymbals', 'Amp wall', 'Room B for duos', 'Mixer and PA', 'Waiting area'],
+  galleryPlaceholders: ['Studio A, full band setup', 'Drum kit and cymbals', 'Amp wall', 'Studio B for duos', 'Mixer and PA', 'Waiting area'],
 };

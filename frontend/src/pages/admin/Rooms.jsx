@@ -20,7 +20,7 @@ export default function Rooms() {
 
   return (
     <div className="a-page">
-      <PageHead title="Rooms" sub="Rates and gear here show on the website right away.">
+      <PageHead title="Studios" sub="Rates and gear here show on the website right away.">
         <button
           type="button"
           className="btn btn-dark"
@@ -29,12 +29,12 @@ export default function Rooms() {
             setOpen(true);
           }}
         >
-          <Plus /> Add room
+          <Plus /> Add studio
         </button>
       </PageHead>
 
       {!list && <div className="skeleton" style={{ height: 180 }} />}
-      {list && list.length === 0 && <p className="a-empty">No rooms yet. Add your first room so bands can book it.</p>}
+      {list && list.length === 0 && <p className="a-empty">No studios yet. Add your first studio so bands can book it.</p>}
       {list && list.length > 0 && (
         <ul className="room-admin-list">
           {list.map((r) => (
@@ -120,7 +120,7 @@ function RoomDialog({ room, open, onOpenChange, onSaved }) {
     try {
       if (isNew) await adminApi.createRoom(payload);
       else await adminApi.updateRoom(room.id, payload);
-      toast.success(isNew ? `${form.name} added` : 'Room saved');
+      toast.success(isNew ? `${form.name} added` : 'Studio saved');
       onSaved();
       onOpenChange(false);
       setLastRoom(null);
@@ -156,13 +156,13 @@ function RoomDialog({ room, open, onOpenChange, onSaved }) {
           onOpenChange(o);
           if (!o) setLastRoom(null);
         }}
-        title={isNew ? 'Add room' : `Edit ${room.name}`}
+        title={isNew ? 'Add studio' : `Edit ${room.name}`}
         wide
       >
         <form onSubmit={save} noValidate>
           <div className="form-grid">
             <Field label="Name">
-              {(p) => <input {...p} className="input" value={form.name} onChange={set('name')} maxLength={60} placeholder="Room C" />}
+              {(p) => <input {...p} className="input" value={form.name} onChange={set('name')} maxLength={60} placeholder="Studio C" />}
             </Field>
             <div className="form-grid-2">
               <Field label="Rate per hour (₱)">
@@ -215,14 +215,14 @@ function RoomDialog({ room, open, onOpenChange, onSaved }) {
           <div className="dialog-actions">
             {!isNew && (
               <button type="button" className="btn btn-ghost a-danger-text" onClick={() => setConfirmDelete(true)} style={{ marginRight: 'auto' }}>
-                Delete room
+                Delete studio
               </button>
             )}
             <button type="button" className="btn btn-outline" onClick={() => onOpenChange(false)}>
               Cancel
             </button>
             <button type="submit" className="btn btn-dark" disabled={busy}>
-              {busy ? 'Saving…' : isNew ? 'Add room' : 'Save room'}
+              {busy ? 'Saving…' : isNew ? 'Add studio' : 'Save studio'}
             </button>
           </div>
         </form>
@@ -232,8 +232,8 @@ function RoomDialog({ room, open, onOpenChange, onSaved }) {
           open={confirmDelete}
           onOpenChange={setConfirmDelete}
           title={`Delete ${room.name}?`}
-          description="Rooms with past bookings can’t be deleted, so their records stay complete. Hide the room from the website instead."
-          confirmLabel="Delete room"
+          description="Studios with past bookings can’t be deleted, so their records stay complete. Hide the studio from the website instead."
+          confirmLabel="Delete studio"
           danger
           busy={busy}
           onConfirm={remove}

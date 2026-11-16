@@ -17,6 +17,17 @@ export function bufferText(settings) {
   return m ? `${minutesText(m)} is kept after each session for cleaning.` : '';
 }
 
+/**
+ * Statuses that hold a room, as on the server. Cancelled, expired, completed and no-show bookings don't.
+ * Items from the public availability feed carry no status at all; those are always holding.
+ */
+export const HOLDING_STATUSES = ['pending', 'confirmed'];
+export const holds = (status) => !status || HOLDING_STATUSES.includes(status);
+
+/** Bookings that are gone from the boards: listed like cancelled ones (a GCash hold that ran out is "expired"). */
+export const DEAD_STATUSES = ['cancelled', 'expired'];
+export const isDead = (status) => DEAD_STATUSES.includes(status);
+
 const isBlock = (b) => b.kind === 'block';
 
 /** Any overlap with a booking or block itself (no buffer). */
@@ -74,7 +85,7 @@ export function startOptions({ busy, settings, window, paidHours, ignoreBooking 
  * stopping where the next booking or block starts. Pass the items for ONE room.
  */
 export function withBufferClips(roomItems, buffer) {
-  const isActive = (it) => it.kind === 'booking' && !['cancelled', 'completed', 'no_show'].includes(it.status);
+  const isActive = (it) => it.kind === 'booking' && holds(it.status);
   const bookings = roomItems.filter(isActive);
   const clips = [];
   for (const it of bookings) {

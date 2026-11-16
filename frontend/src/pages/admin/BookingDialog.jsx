@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MessageSquare, Phone, Mail } from 'lucide-react';
 import { adminApi } from '../../lib/api.js';
 import { ConfirmDialog, Dialog, Field, StatusBadge } from '../../components/ui.jsx';
-import { bookingEnd, bookingStart, dateLabel, formatPhone, hourLabel, hoursText, PAYMENT_LABELS, peso, rangeLabel, splitStart } from '../../lib/format.js';
+import { bookingEnd, bookingStart, dateLabel, formatPhone, hourLabel, hoursText, paymentLabel, peso, rangeLabel, splitStart } from '../../lib/format.js';
 import { useAdmin } from './admin-shared.jsx';
+import { BalanceActions, PaymentStageBadge, ProofLightbox, ProofThumb, ReceiptCheck, balanceOpen, gcashLink, needsPaymentCheck, stageOf } from './payment-shared.jsx';
 
 /** Details and actions for one booking. `booking` stays mounted while closing so the exit animation has content. */
 export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
@@ -17,6 +19,7 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
   const [moving, setMoving] = useState(false);
   // Set when the server says the change only clashes with another booking's cleaning time (409, code 'buffer').
   const [bufferAsk, setBufferAsk] = useState(null); // { body, message, text }
+  const [proof, setProof] = useState(null); // a screenshot open in the lightbox
 
   useEffect(() => {
     if (booking) {
@@ -59,6 +62,16 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
 
   const who = b.bandName || b.name;
   const active = b.status === 'pending' || b.status === 'confirmed';
+  const pay = b.payment?.plan ? b.payment : null; // new-style GCash booking
+  const payStage = stageOf(b);
+  // A GCash booking whose deposit isn't confirmed can only be confirmed (or reopened) from GCash payments,
+  // so the payment is recorded and the audit trail stays right.
+  const checkPay = needsPaymentCheck(b);
+  const checkPayLink = (
+    <Link className="btn btn-dark" to={gcashLink(b)} onClick={() => onOpenChange(false)}>
+      Check the payment
+    </Link>
+  );
 
   return (
     <>
@@ -75,9 +88,13 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
                 <button type="button" className="btn btn-outline" onClick={() => setConfirm('cancel')} disabled={busy}>
                   Decline
                 </button>
-                <button type="button" className="btn btn-dark" onClick={() => patch({ status: 'confirmed' }, 'Booking confirmed')} disabled={busy}>
-                  Confirm booking
-                </button>
+                {checkPay ? (
+                  checkPayLink
+                ) : (
+                  <button type="button" className="btn btn-dark" onClick={() => patch({ status: 'confirmed' }, 'Booking confirmed')} disabled={busy}>
+                    Confirm booking
+                  </button>
+                )}
               </>
             )}
             {b.status === 'confirmed' && (
@@ -93,11 +110,15 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
                 </button>
               </>
             )}
-            {!active && (
-              <button type="button" className="btn btn-outline" onClick={() => patch({ status: 'confirmed' }, 'Booking reopened')} disabled={busy}>
-                Reopen as confirmed
-              </button>
-            )}
+            {!active &&
+              (checkPay ? (
+                // Expired holds can be confirmed from GCash payments; a cancelled booking with a receipt may need a refund there.
+                payStage === 'expired' || pay?.canRefund ? checkPayLink : null
+              ) : (
+                <button type="button" className="btn btn-outline" onClick={() => patch({ status: 'confirmed' }, 'Booking reopened')} disabled={busy}>
+                  Reopen as confirmed
+                </button>
+              ))}
           </>
         }
       >
@@ -180,7 +201,10 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
             </div>
             <div>
               <dt>Payment</dt>
-              <dd>{PAYMENT_LABELS[b.paymentMethod]}</dd>
+              <dd>
+                {paymentLabel(b)}
+                {pay && payStage === 'paid' && <strong className="paid-mark"> PAID</strong>}
+              </dd>
             </div>
             {b.notes && (
               <div>
@@ -190,10 +214,63 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
             )}
           </dl>
 
+          {pay && (
+            <div className="bd-pay">
+              <div className="bd-pay-head">
+                <PaymentStageBadge stage={payStage} plan={pay.plan} />
+                <Link className="gp-link" to="/admin/gcash" onClick={() => onOpenChange(false)}>
+                  Open GCash payments
+                </Link>
+              </div>
+              <dl className="bd-pay-list tnum">
+                <div>
+                  <dt>Due online</dt>
+                  <dd>{peso(pay.amountDue)}</dd>
+                </div>
+                <div>
+                  <dt>Received</dt>
+                  <dd>{peso(pay.paidAmount)}</dd>
+                </div>
+                {pay.plan === 'half' && (
+                  <div>
+                    <dt>Balance</dt>
+                    <dd>
+                      {pay.balancePaid > 0 && `${peso(pay.balancePaid)} paid by ${pay.balanceMethod === 'gcash' ? 'GCash' : 'cash'}`}
+                      {pay.balancePaid > 0 && balanceOpen(pay) && ', '}
+                      {balanceOpen(pay)
+                        ? `${peso(pay.balanceDue)} ${pay.balancePaid > 0 ? 'more ' : ''}due at the studio`
+                        : pay.balancePaid > 0
+                          ? ''
+                          : `${peso(Math.max(0, b.total - pay.amountDue))} at the studio once the deposit is confirmed`}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {b.proofs?.length > 0 && (
+                <div className="gp-proofs">
+                  {b.proofs.map((pr) => (
+                    <ProofThumb key={pr.id} proof={pr} onOpen={setProof} />
+                  ))}
+                </div>
+              )}
+              <ReceiptCheck booking={b} />
+              <BalanceActions
+                booking={b}
+                onDone={(nb) => {
+                  if (nb) setCurrent(nb);
+                  changed();
+                  onSaved?.(nb);
+                }}
+              />
+            </div>
+          )}
+
           <div className="bd-staff">
-            <Field label="GCash or receipt reference" optional>
-              {(p) => <input {...p} className="input tnum" value={paymentRef} onChange={(e) => setPaymentRef(e.target.value)} maxLength={40} />}
-            </Field>
+            {!pay && (
+              <Field label="GCash or receipt reference" optional>
+                {(p) => <input {...p} className="input tnum" value={paymentRef} onChange={(e) => setPaymentRef(e.target.value)} maxLength={40} />}
+              </Field>
+            )}
             <Field label="Staff notes" optional hint="Only staff see this.">
               {(p) => (
                 <textarea
@@ -217,6 +294,8 @@ export function BookingDialog({ booking, open, onOpenChange, onSaved }) {
           </div>
         </div>
       </Dialog>
+
+      <ProofLightbox proof={proof} onOpenChange={(o) => !o && setProof(null)} />
 
       <ConfirmDialog
         open={confirm === 'cancel'}
@@ -286,7 +365,7 @@ function MoveForm({ booking, busy, onCancel, onSave }) {
   return (
     <div className="bd-move-form">
       <div className="form-grid">
-        <Field label="Room">
+        <Field label="Studio">
           {(p) => (
             <select {...p} className="select" value={form.roomId} onChange={set('roomId')}>
               {rooms.map((r) => (
@@ -325,7 +404,7 @@ function MoveForm({ booking, busy, onCancel, onSave }) {
         </Field>
       </div>
       <p className="field-hint" style={{ marginTop: 8 }}>
-        The price updates to the new room’s rate. The free promo hour is added again if it fits.
+        The price updates to the new studio’s rate. The free promo hour is added again if it fits.
       </p>
       <div className="bd-move-actions">
         <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>
