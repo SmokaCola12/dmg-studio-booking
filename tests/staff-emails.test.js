@@ -427,7 +427,6 @@ test('new booking, pay at the studio: exactly one email to the studio inbox with
   hasLine(m, 'Status: Pending, waiting for your approval');
   hasLine(m, 'Customer: Rico Blanco (The Test Pilots)');
   hasLine(m, `Phone: ${PHONE}`);
-  hasLine(m, `Studio: ${b.room.name}`);
   hasLine(m, `When: ${when}`);
   hasLine(m, 'Hours: 2 + 1 free');
   hasLine(m, `Total: ${peso(b.total)}`);

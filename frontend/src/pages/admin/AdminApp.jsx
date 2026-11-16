@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { BrandMark } from '../../components/SiteChrome.jsx';
 import { NavLink, Route, Routes, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CalendarDays, DoorOpen, ExternalLink, LayoutList, LogOut, Settings as SettingsIcon, Sun, Images, Wallet } from 'lucide-react';
@@ -94,12 +95,7 @@ function AdminShell({ onLogout }) {
       <div className="admin">
         <aside className="a-side">
           <Link to="/admin" className="wordmark a-wordmark">
-            <svg viewBox="0 0 32 32" aria-hidden="true">
-              <rect x="3" y="8" width="14" height="7" rx="2" fill="var(--marigold)" />
-              <rect x="12" y="18" width="15" height="7" rx="2" fill="var(--teal)" />
-              <rect x="20" y="4" width="2.4" height="24" rx="1.2" fill="var(--rec)" />
-            </svg>
-            <span>{site.shortName}</span>
+            <BrandMark />
           </Link>
           <nav className="a-nav" aria-label="Admin">
             {NAV.map(({ to, label, icon: Icon, end, badge }) => {
@@ -131,12 +127,7 @@ function AdminShell({ onLogout }) {
 
         <header className="a-topbar">
           <Link to="/admin" className="wordmark a-wordmark">
-            <svg viewBox="0 0 32 32" aria-hidden="true">
-              <rect x="3" y="8" width="14" height="7" rx="2" fill="var(--marigold)" />
-              <rect x="12" y="18" width="15" height="7" rx="2" fill="var(--teal)" />
-              <rect x="20" y="4" width="2.4" height="24" rx="1.2" fill="var(--rec)" />
-            </svg>
-            <span>{site.shortName}</span>
+            <BrandMark />
           </Link>
           <div className="a-topbar-actions">
             <a href="/" target="_blank" rel="noreferrer" className="a-icon-btn" aria-label="View website">

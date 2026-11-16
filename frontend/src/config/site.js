@@ -16,15 +16,15 @@ export const site = {
   mapsQuery: '10-U-A Baltazar St, Grace Park West, Caloocan, 1405 Metro Manila',
 
   // How people reach you
-  phone: '0917 000 0000',
-  email: 'hello@example.com',
+  phone: '0917 483 5387',
+  email: 'dmgperformance@gmail.com',
   messenger: 'https://m.me/61592423610143',
   socials: [{ label: 'Facebook', href: 'https://www.facebook.com/profile.php?id=61592423610143' }],
 
   // Shown in the "Before you come" section
   houseRules: [
     'Arrive 10 minutes early so you can set up on time. Your slot ends on the hour.',
-    'Bring your own instruments, cables, sticks and picks. Cymbals are provided in the bigger studio.',
+    'You can bring your own instruments, cables, sticks and picks.',
     'Food stays outside. Water in sealed bottles is fine.',
     'Damage to studio gear is charged at repair cost.',
     'No smoking or vaping inside the building.',
@@ -41,7 +41,7 @@ export const site = {
     },
     {
       q: 'What if we run late?',
-      a: 'You can extend if the next hour is free. If someone booked after you, your session ends on time so theirs can start.',
+      a: 'You can’t extend a session online. If you want more time, tell the studio first. We can add an hour only if the next slot is still free. If someone booked after you, your session ends on time so theirs can start.',
     },
     {
       q: 'Can I cancel or move my booking?',
@@ -50,5 +50,5 @@ export const site = {
   ],
 
   // Gallery photos are uploaded in /admin/content. These labels show on the placeholders until the first photo is added.
-  galleryPlaceholders: ['Studio A, full band setup', 'Drum kit and cymbals', 'Amp wall', 'Studio B for duos', 'Mixer and PA', 'Waiting area'],
+  galleryPlaceholders: ['Studio A, full band setup', 'Drum kit and cymbals', 'Amp wall', 'Mixer and PA', 'Waiting area'],
 };

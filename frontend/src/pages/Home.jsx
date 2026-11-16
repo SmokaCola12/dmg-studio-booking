@@ -7,6 +7,7 @@ import { useAvailability } from '../lib/useAvailability.js';
 import { Calendar } from '../components/Calendar.jsx';
 import { DayView } from '../components/DayView.jsx';
 import { BookingCard } from '../components/BookingCard.jsx';
+import { Gallery } from '../components/Gallery.jsx';
 import { HowToBook } from '../components/HowToBook.jsx';
 import { addDays, dateLabel, hourLabel, hoursSentence, peso, relativeDay, rangeLabel } from '../lib/format.js';
 import { bufferMinutes, promoText, withBufferClips } from '../lib/schedule.js';
@@ -87,9 +88,6 @@ export default function Home() {
               Book
             </h1>
             <p className="hero-lead">Pick a day, a start time and a studio. Your details come on the next page.</p>
-            <Link className="resched-nudge" to="/check">
-              <CalendarClock aria-hidden="true" /> Need to reschedule? Move your booking
-            </Link>
           </div>
 
           {settings && rooms.length > 0 && today && <BookingCard rooms={rooms} settings={settings} today={today} />}
@@ -181,6 +179,9 @@ export default function Home() {
                 intro
               />
             )}
+            <Link className="resched-nudge" to="/check">
+              <CalendarClock aria-hidden="true" /> Need to reschedule? Move your booking
+            </Link>
           </div>
         </div>
       </section>
@@ -249,20 +250,13 @@ export default function Home() {
             <p className="label section-kicker">The studios, as they are</p>
             <h2 id="gallery-title" className="section-title">Inside the studio</h2>
           </div>
-          <div className="gallery">
-            {photos.length > 0
-              ? photos.map((g) => (
-                  <figure key={g.id ?? g.src} className="gallery-item">
-                    <img src={g.src} alt={g.alt} loading="lazy" />
-                  </figure>
-                ))
-              : site.galleryPlaceholders.map((label) => (
-                  <figure key={label} className="gallery-item gallery-placeholder">
-                    <span className="label">Photo to come</span>
-                    <figcaption>{label}</figcaption>
-                  </figure>
-                ))}
-          </div>
+          <Gallery
+            items={
+              photos.length > 0
+                ? photos.map((g) => ({ key: g.id ?? g.src, src: g.src, alt: g.alt }))
+                : site.galleryPlaceholders.map((label) => ({ key: label, label }))
+            }
+          />
         </div>
       </section>
 
